@@ -28,7 +28,7 @@ echo "[2/4] 运行 Go 版本生成器..."
 cd "$SCRIPT_DIR/.."
 go run cmd/main.go cmdb \
     --base-dir "$BASE_DIR" \
-    --vars vars.yaml \
+    --vars vars-test.yaml \
     --resources resources.yaml \
     -o "$GO_OUTPUT_DIR"
 
