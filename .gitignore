@@ -1,0 +1,56 @@
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+k8s-gen
+k8s-gen-*
+
+# Test binary
+*.test
+
+# Output of the go coverage tool
+*.out
+
+# Dependency directories
+vendor/
+
+# Go workspace file
+go.work
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Config files (keep examples, hide real configs)
+!configs/*.example.yaml
+configs/vars.yaml
+configs/resources.yaml
+configs/mapping.yaml
+
+# Output directory
+output/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Python virtualenv
+venv/
+.env/
+
+# Logs
+*.log
+comparison/*
+dist/
+templates/
+configs/
+roles/
