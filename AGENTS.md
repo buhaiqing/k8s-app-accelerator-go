@@ -6,7 +6,7 @@
 将现有的 Ansible-based K8s 配置生成器迁移到 Golang 实现，保持 100% Jinja2 模板兼容性，同时获得 Go 语言的性能、类型安全和工程化优势。
 
 **当前阶段**: 已完成 ArgoCD、Jenkins、CMDB 模块的迁移  
-**长期目标**: 逐步迁移整个 `/Users/bohaiqing/work/git/k8s_app_acelerator/` 下的所有功能模块
+**长期目标**: 逐步迁移整个 `k8s_app_acelerator` 下的所有功能模块
 
 ### 核心目标
 - ✅ **100% 兼容现有 Jinja2 模板**（无需修改 Ansible roles）
@@ -53,6 +53,7 @@
 | **开发效率** | ⭐⭐⭐⭐⭐ | Go 负责逻辑，Python 专注渲染 |
 | **部署** | ⭐⭐⭐⭐ | 单二进制 + Python 运行时 |
 | **维护成本** | ⭐⭐⭐⭐ | 清晰的模块边界 |
+| **跨平台** | ⭐⭐⭐⭐⭐ | Windows/macOS/Linux原生支持，无需 WSL 或虚拟机 |
 
 ---
 
@@ -947,4 +948,4 @@ perf: optimize worker pool initialization
 
 **最后更新**: 2025-03-14  
 **维护者**: K8s App Accelerator Team  
-**联系方式**: [你的联系方式]
+
