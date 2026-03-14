@@ -15,15 +15,37 @@ type ProjectConfig struct {
 	HarborProject     string            `yaml:"harbor_project"`
 
 	// Ansible 兼容字段
-	DNETProduct   string            `yaml:"DNET_PRODUCT"`
-	Namespace     string            `yaml:"namespace"`
-	ResourceGroup string            `yaml:"resource_group"`
+	DNETProduct   string                 `yaml:"DNET_PRODUCT"`
+	Namespace     string                 `yaml:"namespace"`
+	ResourceGroup string                 `yaml:"resource_group"`
 	AppAuth       map[string]interface{} `yaml:"app_auth"`
 
 	// 嵌套配置
 	Apollo  ApolloConfig  `yaml:"apollo"`
 	ArgoCD  ArgoCDConfig  `yaml:"argocd"`
 	Jenkins JenkinsConfig `yaml:"jenkins"`
+
+	// Jenkins Jobs 专用字段（对应 jenkins_jobs/vars.yaml）
+	Common CommonConfig  `yaml:"common"`
+	Data   []JenkinsData `yaml:"data"`
+}
+
+// CommonConfig Jenkins 通用配置
+type CommonConfig struct {
+	DNETProject  string `yaml:"DNET_PROJECT"`
+	GitBaseURL   string `yaml:"GIT_BASE_URL"`
+	GitBaseGroup string `yaml:"GIT_BASE_GROUP"`
+	Output       string `yaml:"output"`
+	Receivers    string `yaml:"receivers"`
+	Env          string `yaml:"env"`
+	Surfix       string `yaml:"surfix"`
+}
+
+// JenkinsData Jenkins Job 数据
+type JenkinsData struct {
+	Common      CommonConfig `yaml:",inline"`
+	DNETProduct string       `yaml:"DNET_PRODUCT"`
+	ProductDes  string       `yaml:"product_des"`
 }
 
 // ApolloConfig Apollo 配置

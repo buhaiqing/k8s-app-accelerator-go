@@ -10,6 +10,7 @@ import (
 	"github.com/buhaiqing/k8s-app-accelerator-go/internal/model"
 	"github.com/buhaiqing/k8s-app-accelerator-go/internal/validator"
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v3"
 )
 
 var (
@@ -80,9 +81,25 @@ func runGenerateArgoCD() error {
 		bootstrapFile = filepath.Join(baseDir, bootstrapFile)
 	}
 
+	// 加载 bootstrap 文件以获取 profile 信息
+	var bootstrapData struct {
+		Profile string `yaml:"profile,omitempty"`
+	}
+	if data, err := os.ReadFile(bootstrapFile); err == nil {
+		yaml.Unmarshal(data, &bootstrapData)
+	}
+
 	roleVars, err := loadBootstrap(bootstrapFile, baseDir)
 	if err != nil {
 		return fmt.Errorf("加载 bootstrap 失败：%w", err)
+	}
+
+	// 如果 bootstrap 中指定了 profile，覆盖所有 roleVars 的 Profile
+	if bootstrapData.Profile != "" {
+		for _ = range roleVars {
+			// 注意：RoleVars 结构体中没有 Profile 字段，暂时跳过
+			// TODO: 如需支持，请在 model.RoleVars 中添加 Profile 字段
+		}
 	}
 
 	// 如果指定了 roles，过滤只生成指定的 roles
@@ -91,6 +108,10 @@ func runGenerateArgoCD() error {
 		for _, rv := range roleVars {
 			for _, roleName := range argocdRoles {
 				if rv.App == roleName {
+					// 如果 bootstrap 中指定了 profile，覆盖 Profile
+					if bootstrapData.Profile != "" {
+						rv.Profile = bootstrapData.Profile
+					}
 					filteredRoleVars = append(filteredRoleVars, rv)
 					break
 				}
@@ -100,6 +121,11 @@ func runGenerateArgoCD() error {
 			return fmt.Errorf("未找到指定的 roles: %v", argocdRoles)
 		}
 		roleVars = filteredRoleVars
+	} else if bootstrapData.Profile != "" {
+		// 如果没有指定 roles，且 bootstrap 中有 profile，应用到所有
+		for i := range roleVars {
+			roleVars[i].Profile = bootstrapData.Profile
+		}
 	}
 
 	// 3. Pre-Check（除非跳过）
@@ -150,7 +176,15 @@ func runGenerateArgoCD() error {
 
 	// 5. 创建生成器
 	scriptPath := filepath.Join(baseDir, "scripts", "render_worker.py")
-	templateDir := filepath.Join(baseDir, "templates", "argo-app")
+	templateDir := filepath.Join(baseDir, "output", "argo-app")
+
+	// 确保使用绝对路径
+	if !filepath.IsAbs(templateDir) {
+		templateDir, _ = filepath.Abs(templateDir)
+	}
+	if !filepath.IsAbs(scriptPath) {
+		scriptPath, _ = filepath.Abs(scriptPath)
+	}
 
 	gen, err := generator.NewArgoCDGenerator(
 		projectConfig,

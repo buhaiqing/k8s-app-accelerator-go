@@ -19,5 +19,9 @@ func Execute() error {
 
 func init() {
 	// 添加全局 flags
-	rootCmd.PersistentFlags().StringP("base-dir", "b", "/Users/bohaiqing/work/git/k8s_app_acelerator/gitlab_cfg", "基础目录路径（默认会读取该目录下的 bootstrap.yml, configs/vars.yaml, configs/resources.yaml, configs/mapping.yaml）")
+	rootCmd.PersistentFlags().StringP("base-dir", "b", ".", "基础目录路径（默认会读取该目录下的 configs/vars.yaml, configs/resources.yaml, configs/mapping.yaml）")
+	rootCmd.PersistentFlags().String("config", "configs/vars.yaml", "配置文件路径")
+	rootCmd.PersistentFlags().String("bootstrap", "bootstrap.yml", "Bootstrap 文件路径")
+	rootCmd.PersistentFlags().String("resources", "configs/resources.yaml", "资源文件路径")
+	rootCmd.PersistentFlags().String("mapping", "configs/mapping.yaml", "Mapping 文件路径")
 }

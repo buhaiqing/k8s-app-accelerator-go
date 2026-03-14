@@ -213,7 +213,8 @@ func init() {
 
 // BootstrapFile bootstrap.yml 数据结构
 type BootstrapFile struct {
-	Roles []string `yaml:"roles"`
+	Roles   []string `yaml:"roles"`
+	Profile string   `yaml:"profile,omitempty"` // 添加 profile 字段
 }
 
 // loadBootstrap 加载 bootstrap.yml 文件和对应的 role vars

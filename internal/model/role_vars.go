@@ -9,6 +9,7 @@ type RoleVars struct {
 	HarborProject string `yaml:"harbor_project" json:"harbor_project"`
 	Image         string `yaml:"image" json:"image"`
 	Type          string `yaml:"_type" json:"_type"`
+	Profile       string `yaml:"profile,omitempty" json:"profile"` // 添加 profile 字段
 
 	// 功能开关
 	EnableHPA bool `yaml:"enable_hpa" json:"enable_hpa"`

@@ -294,6 +294,30 @@ def flatten(nested_list):
     return result
 
 
+def random_filter(value, min_val=0, max_val=None):
+    """
+    Ansible random filter - 生成随机数
+    
+    Args:
+        value: 最大值（如果 max_val 未指定）或最小值
+        min_val: 最小值
+        max_val: 最大值（可选）
+        
+    Returns:
+        随机整数
+        
+    Example:
+        {{ 100 | random }}  # 生成 0-99 的随机数
+        {{ 20000 | random }}  # 生成 0-19999 的随机数
+    """
+    if max_val is None:
+        # 只提供了一个参数，作为最大值
+        max_val = value
+        min_val = 0
+    
+    return random.randint(min_val, max_val - 1)
+
+
 # ============================================================
 # Password Filters - 来自 Ansible filter_plugins/password.py
 # ============================================================
@@ -413,6 +437,9 @@ def load_filters():
         'intersect': intersect,
         'union': union,
         'flatten': flatten,
+        
+        # 随机数生成
+        'random': random_filter,
         
         # 密码生成 filters（来自 Ansible filter_plugins/password.py）
         'password_generate': password_generate,
