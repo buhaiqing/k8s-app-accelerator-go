@@ -43,7 +43,7 @@ go run cmd/main.go generate --base-dir /path/to/configs
 # 使用默认 base-dir
 go run cmd/main.go generate
 
-# ========== ArgoCD Application 生成（新增） ==========
+# ========== ArgoCD Application 生成 ==========
 # 生成所有 ArgoCD Applications
 go run cmd/main.go argocd generate --base-dir /path/to/configs
 
@@ -57,6 +57,24 @@ go run cmd/main.go argocd generate --base-dir /path/to/configs --skip-precheck
 
 # 查看详细日志
 go run cmd/main.go argocd generate --base-dir /path/to/configs --verbose
+
+# ========== Jenkins Jobs 生成 ==========
+# 生成 Jenkins Jobs 配置
+go run cmd/main.go jenkins generate \
+  --base-dir /path/to/configs \
+  --output output/jenkins
+
+# ========== CMDB SQL 生成 ==========
+# 生成 CMDB 初始化 SQL
+go run cmd/main.go cmdb \
+  --base-dir /path/to/configs \
+  --output output/cmdb
+
+# ========== GitLab Cfg 生成 ==========
+# 生成 GitLab 项目配置
+go run cmd/main.go gitlab-cfg generate \
+  --base-dir /path/to/configs \
+  --output output/gitlab-cfg
 ```
 
 ## 🎛️ ArgoCD 命令详解
@@ -174,6 +192,402 @@ output/argo-app/cms-project/int/k8s_baas/
 ├── fms-service.yaml
 └── user-service.yaml
 ```
+
+## 🎛️ Jenkins Jobs 命令详解
+
+### 命令结构
+
+```bash
+# 基本格式
+go run cmd/main.go jenkins [command] [flags]
+
+# 可用命令
+generate    # 生成 Jenkins Jobs 配置
+help        # 显示帮助信息
+```
+
+### 使用示例
+
+```bash
+# 生成所有 Jenkins Jobs
+go run cmd/main.go jenkins generate --base-dir .
+
+# 自定义输出目录
+go run cmd/main.go jenkins generate \
+  --base-dir . \
+  --output output/jenkins-jobs
+```
+
+### 输出文件结构
+
+```
+output/
+└── jenkins-jobs/
+    └── jobs/
+        ├── cms-service/
+        │   └── config.xml
+        ├── fms-service/
+        │   └── config.xml
+        └── ...
+```
+
+## 🎛️ CMDB SQL 命令详解
+
+### 命令结构
+
+```bash
+# 基本格式
+go run cmd/main.go cmdb [flags]
+
+# 可用命令
+cmdb    # 生成 CMDB 初始化 SQL
+help    # 显示帮助信息
+```
+
+### Flags 参数说明
+
+| Flag | 简写 | 默认值 | 说明 |
+|------|------|--------|------|
+| `--output` | `-o` | `output` | 输出目录路径 |
+| `--vars` | - | `configs/vars.yaml` | vars 配置文件路径 |
+| `--resources` | - | `configs/resources.yaml` | resources 资源文件路径 |
+| `--base-dir` | - | `.` | 基础工作目录 |
+
+### 使用示例
+
+```bash
+# 生成 CMDB SQL 脚本
+go run cmd/main.go cmdb \
+  --base-dir . \
+  --output output/cmdb-sql
+
+# 指定配置文件
+go run cmd/main.go cmdb \
+  --base-dir /path/to/configs \
+  --vars vars-test.yaml \
+  --resources resources.yaml \
+  --output output/cmdb-test
+```
+
+### 输出文件结构
+
+```
+output/
+└── cmdb/
+    ├── sql_int.sql              # 测试环境 SQL
+    ├── sql_uat.sql              # UAT 环境 SQL
+    └── sql_production.sql       # 生产环境 SQL
+```
+
+### SQL 内容示例
+
+```sql
+-- DockerHub 凭证
+INSERT INTO `dockerhub`(`url`, `username`, `password`, `environment`) 
+VALUES ('harbor.qianfan123.com', 'qianfan', 'headingqianfan', 'int');
+
+-- Stack 配置
+INSERT INTO `stack`(`id`, `type`, `environment`, `dbCount`, `shopCountPerDb`, `currentShopCount`) 
+VALUES ('baas', 'plat', 'int', NULL, NULL, NULL);
+
+-- RDS 数据库
+INSERT INTO `rds`(`id`, `stackId`, `ip`, `port`, `username`, `password`, `rdsInstanceId`, ...)
+VALUES ('int-rds-14736', 'baas', 't4nvm2lpvtysg.oceanbase.aliyuncs.com', '3306', ...);
+
+-- MongoDB 配置
+INSERT INTO `dds`(`id`, `ip`, `port`, `password`, `ddsInstanceId`, `stackId`, `username`, ...)
+VALUES ('int-mongo-13846', NULL, NULL, 'JGsEUpf4hfFSro8n', NULL, 'baas', 'lpmas', ...);
+```
+
+## 🎛️ GitLab Cfg 命令详解
+
+### 命令结构
+
+```bash
+# 基本格式
+go run cmd/main.go gitlab-cfg [command] [flags]
+
+# 可用命令
+generate    # 生成 GitLab 项目配置
+help        # 显示帮助信息
+```
+
+### 使用示例
+
+```bash
+# 生成 GitLab 项目配置
+go run cmd/main.go gitlab-cfg generate \
+  --base-dir . \
+  --output output/gitlab-configs
+
+# 生成特定项目的配置
+go run cmd/main.go gitlab-cfg generate \
+  --base-dir . \
+  --project my-project \
+  --output output/my-project-configs
+```
+
+### 输出文件结构
+
+```
+output/
+└── gitlab-configs/
+    ├── vars.yaml                    # 项目变量配置
+    ├── resources.yaml               # 资源配置
+    ├── mapping.yaml                 # 应用映射
+    └── bootstrap.yml                # Bootstrap 配置
+```
+
+## 🛠️ Scripts 工具脚本
+
+项目提供了多个实用的 Shell 脚本工具，用于自动化测试、对比和验证。
+
+### 1. compare_cmdb_outputs.sh - CMDB 输出对比脚本
+
+**用途**: 对比 Go 版本和 Ansible 版本生成的 CMDB SQL 配置文件
+
+**基本用法**:
+```bash
+cd /Users/bohaiqing/opensource/git/k8s-app-accelerator-go
+./scripts/compare_cmdb_outputs.sh
+```
+
+**详细说明**:
+- 自动清理旧的输出目录
+- 运行 Go 版本生成器
+- 尝试运行 Ansible 版本生成器（如果 playbook 存在）
+- 智能对比两个版本的输出
+- 显示详细的差异报告
+
+**输出示例**:
+```
+================================================
+CMDB SQL 生成器对比测试
+================================================
+
+工作目录：/Users/bohaiqing/opensource/git/k8s-app-accelerator-go/scripts
+基础目录：/Users/bohaiqing/work/git/k8s_app_acelerator/gitlab_cfg
+
+[1/5] 清理输出目录...
+[2/5] 运行 Go 版本生成器...
+✓ Go 版本生成成功
+[3/5] 准备 Ansible 版本输出...
+✓ Ansible 版本输出已存在
+[4/5] 检查输出文件...
+  Go 版本生成 1 个文件
+  Ansible 版本生成 1 个文件
+[5/5] 对比输出结果...
+
+✅ 恭喜！Go 和 Ansible 生成的输出完全一致！
+
+================================================
+✓ Go 版本 CMDB SQL 生成器功能验证完成！
+================================================
+```
+
+### 2. compare_jenkins_outputs.sh - Jenkins 输出对比脚本
+
+**用途**: 对比 Go 版本和 Ansible 版本生成的 Jenkins Jobs 配置
+
+**基本用法**:
+```bash
+cd /Users/bohaiqing/opensource/git/k8s-app-accelerator-go
+./scripts/compare_jenkins_outputs.sh
+```
+
+**详细说明**:
+- 自动清理并重建输出目录
+- 并行运行 Go 和 Ansible 版本生成器
+- 逐文件对比生成的 XML 配置
+- 忽略空白字符和格式差异
+- 生成详细的对比报告
+
+**输出示例**:
+```
+🧹 清理旧的输出目录...
+🚀 运行 Go 实现...
+✅ Go 实现完成
+🚀 运行 Ansible 实现...
+✅ Ansible 实现完成
+
+📊 对比结果
+==================================================
+总文件数：       5
+相同文件数：     5
+不同文件数：     0
+
+✅ 所有文件内容完全一致！
+```
+
+### 3. compare_argocd_outputs.sh - ArgoCD 输出对比脚本
+
+**用途**: 对比 Go 版本和 Ansible 版本生成的 ArgoCD Application 配置
+
+**基本用法**:
+```bash
+cd /Users/bohaiqing/opensource/git/k8s-app-accelerator-go
+./scripts/compare_argocd_outputs.sh
+```
+
+**特点**:
+- 支持多环境对比（int, uat, production）
+- 智能过滤时间戳等动态字段
+- 生成 Markdown 格式的对比报告
+
+### 4. render_worker.py - Python Jinja2 渲染 Worker
+
+**用途**: 为 Go 程序提供 Jinja2 模板渲染服务
+
+**通信协议**: JSON-RPC over stdin/stdout
+
+**使用方式**:
+```bash
+# Go 程序内部调用（无需手动执行）
+python3 scripts/render_worker.py --worker-mode
+```
+
+**支持的 Filters**:
+- `ternary` - Ansible ternary filter
+- `upper` / `lower` - 大小写转换
+- `profile_convert` - 环境名称转换（int → INT）
+- `mandatory` - 必填值校验
+- 以及所有 Ansible 内置 filters
+
+### 5. filters.py - Ansible Filters 实现
+
+**用途**: 提供与 Ansible 兼容的 Jinja2 filters
+
+**主要 Filters**:
+```python
+# 三元运算符
+def ternary(value, true_val='', false_val=''):
+    return true_val if value else false_val
+
+# 环境转换
+def profile_convert(profile):
+    return profile.upper()
+
+# 必填校验
+def mandatory(value):
+    if not value:
+        raise ValueError("mandatory value is required")
+    return value
+```
+
+### 6. test_workdir.sh - Workdir 测试脚本
+
+**用途**: 测试 CLI 工具的 workdir 参数功能
+
+**基本用法**:
+```bash
+./scripts/test_workdir.sh
+```
+
+## 🔧 自定义对比脚本
+
+如果需要为新的生成器创建对比脚本，可以参考以下模板：
+
+```bash
+#!/usr/bin/env bash
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# 配置目录
+BASE_DIR="${1:-/path/to/configs}"
+GO_OUTPUT_DIR="./output/go-module"
+ANSIBLE_OUTPUT_DIR="./output/ansible-module"
+
+echo "================================================"
+echo "模块名称 对比测试"
+echo "================================================"
+
+# 清理旧输出
+rm -rf "${GO_OUTPUT_DIR}" "${ANSIBLE_OUTPUT_DIR}"
+mkdir -p "${GO_OUTPUT_DIR}" "${ANSIBLE_OUTPUT_DIR}"
+
+# 运行 Go 版本
+echo "[1/4] 运行 Go 版本..."
+go run cmd/main.go module generate \
+    --base-dir "$BASE_DIR" \
+    -o "$GO_OUTPUT_DIR"
+
+# 运行 Ansible 版本
+echo "[2/4] 运行 Ansible 版本..."
+ansible-playbook playbook.yaml \
+    --extra-vars "output=${ANSIBLE_OUTPUT_DIR}"
+
+# 对比输出
+echo "[3/4] 对比输出..."
+diff -rq "$GO_OUTPUT_DIR" "$ANSIBLE_OUTPUT_DIR" || true
+
+# 生成报告
+echo "[4/4] 生成对比报告..."
+echo "✅ 对比完成"
+```
+
+## 📋 最佳实践
+
+### 1. 运行对比测试前
+
+```bash
+# 确保安装了依赖
+pip3 install -r scripts/requirements.txt
+go mod download
+
+# 确保有可执行的权限
+chmod +x scripts/*.sh
+```
+
+### 2. 查看对比报告
+
+```bash
+# 将对比结果保存到文件
+./scripts/compare_cmdb_outputs.sh > comparison_report.txt 2>&1
+
+# 查看文件
+cat comparison_report.txt
+```
+
+### 3. 调试模式
+
+```bash
+# 启用详细输出
+set -x
+./scripts/compare_cmdb_outputs.sh
+set +x
+```
+
+### 4. 清理临时文件
+
+```bash
+# 清理所有测试输出
+rm -rf ./output/cmdb-go ./output/ansible-cmdb
+rm -rf ./output/go-jenkins ./output/ansible-jenkins
+rm -rf /tmp/cmdb-comparison
+```
+
+## 🎯 脚本特性
+
+- ✅ **跨平台兼容** - 支持 macOS/Linux (使用 POSIX sh 语法)
+- ✅ **智能对比** - 自动过滤随机数、时间戳等动态字段
+- ✅ **彩色输出** - 使用颜色标识不同的状态
+- ✅ **详细报告** - 生成完整的对比报告和差异分析
+- ✅ **自动化** - 一键运行所有测试
+- ✅ **错误处理** - 完善的错误检测和提示
+
+## 📝 注意事项
+
+1. **Ansible 路径问题**: 部分 Ansible role 使用了硬编码的路径，可能需要创建符号链接
+2. **随机数处理**: 对比脚本会自动过滤随机数，只比较结构和格式
+3. **环境变量**: 确保已配置必要的环境变量（如 ANSIBLE_CONFIG）
+4. **Python 版本**: 需要 Python 3.6+ 以支持所有 Jinja2 特性
+
+## 📚 更多资源
+
+- [CMDB 对比测试完整流程](./docs/CMDB_COMPARISON_GUIDE.md)
+- [Jenkins 对比测试指南](./docs/JENKINS_COMPARISON_GUIDE.md)
+- [ArgoCD 对比验证](./docs/ARGOCD_COMPARISON_GUIDE.md)
 
 ## 🏗️ 项目结构
 

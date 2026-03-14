@@ -152,7 +152,8 @@ func (g *CMDBGenerator) generateForProfile(profile string, resourceVars map[stri
 	if err := os.MkdirAll(g.outputDir, 0755); err != nil {
 		return fmt.Errorf("创建输出目录失败：%w", err)
 	}
-	outputFile := filepath.Join(g.outputDir, fmt.Sprintf("sql_%s.sql", profile))
+	// 使用 Ansible 兼容的文件名：{profile}.sql 而不是 sql_{profile}.sql
+	outputFile := filepath.Join(g.outputDir, fmt.Sprintf("%s.sql", profile))
 	if err := os.WriteFile(outputFile, []byte(finalSQL), 0644); err != nil {
 		return fmt.Errorf("写入 SQL 文件失败：%w", err)
 	}
