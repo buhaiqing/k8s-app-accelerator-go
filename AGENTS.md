@@ -1,5 +1,3 @@
-[TOC]
-
 # K8s App Accelerator Go - 技术方案文档
 
 ## 📋 项目概述
