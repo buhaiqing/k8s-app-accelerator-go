@@ -29,13 +29,13 @@ var precheckCmd = &cobra.Command{
 
 		// 如果配置文件未指定，使用 base-dir 下的默认文件
 		if configFile == "" {
-			configFile = filepath.Join(baseDir, "configs", "vars.yaml")
+			configFile = filepath.Join(baseDir, "vars.yaml")
 		} else if !filepath.IsAbs(configFile) {
 			configFile = filepath.Join(baseDir, configFile)
 		}
 
 		if resourcesFile == "" {
-			resourcesFile = filepath.Join(baseDir, "configs", "resources.yaml")
+			resourcesFile = filepath.Join(baseDir, "resources.yaml")
 		} else if !filepath.IsAbs(resourcesFile) {
 			resourcesFile = filepath.Join(baseDir, resourcesFile)
 		}
