@@ -7,11 +7,11 @@
 # 版本：v1.4.0 - 智能对比工具（支持容错比对）
 # 
 # 用法:
-#   ./scripts/compare_outputs.sh                                    # 使用默认路径
-#   ./scripts/compare_outputs.sh --no-auto-generate-go             # 禁用自动生成
-#   ./scripts/compare_outputs.sh /path/to/ansible/output           # 指定 Ansible 输出
-#   ./scripts/compare_outputs.sh /path/to/ansible /path/to/go      # 指定两个输出
-#   ./scripts/compare_outputs.sh --help                             # 显示帮助
+#   ./scripts/compare_harness.sh                                    # 使用默认路径
+#   ./scripts/compare_harness.sh --no-auto-generate-go             # 禁用自动生成
+#   ./scripts/compare_harness.sh /path/to/ansible/output           # 指定 Ansible 输出
+#   ./scripts/compare_harness.sh /path/to/ansible /path/to/go      # 指定两个输出
+#   ./scripts/compare_harness.sh --help                             # 显示帮助
 #
 # Ansible 生成命令:
 #   cd /Users/bohaiqing/work/git/k8s_app_acelerator/gitlab_cfg

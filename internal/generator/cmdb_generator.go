@@ -105,9 +105,14 @@ func (g *CMDBGenerator) generateForProfile(profile string, resourceVars map[stri
 	baseContext["_mongo_db"] = fmt.Sprintf("%s-mongo-%d", profile, randomInt(20000))
 
 	// 查找模板文件
-	sqlTemplate := filepath.Join(g.templateDir, "sql.j2")
+	// templateDir 指向 CMDB 根目录，模板在 roles/sql/templates/sql.j2
+	sqlTemplate := filepath.Join(g.templateDir, "roles", "sql", "templates", "sql.j2")
 	if _, err := os.Stat(sqlTemplate); os.IsNotExist(err) {
-		return fmt.Errorf("SQL 模板不存在：%s", sqlTemplate)
+		// 回退到直接查找 templateDir/sql.j2
+		sqlTemplate = filepath.Join(g.templateDir, "sql.j2")
+		if _, err := os.Stat(sqlTemplate); os.IsNotExist(err) {
+			return fmt.Errorf("SQL 模板不存在：%s", sqlTemplate)
+		}
 	}
 
 	// 为每个 stack 生成 SQL 片段
@@ -161,7 +166,12 @@ func (g *CMDBGenerator) generateForProfile(profile string, resourceVars map[stri
 	fmt.Printf("    - 已写入：%s (共 %d 个 stacks)\n", outputFile, len(stackValues))
 
 	// 复制 initsql 文件
-	initsqlSrc := filepath.Join(g.templateDir, "inittables.sql")
+	// templateDir 指向 CMDB 根目录，文件在 roles/initsql/files/inittables.sql
+	initsqlSrc := filepath.Join(g.templateDir, "roles", "initsql", "files", "inittables.sql")
+	if _, err := os.Stat(initsqlSrc); err != nil {
+		// 回退到直接查找 templateDir/inittables.sql
+		initsqlSrc = filepath.Join(g.templateDir, "inittables.sql")
+	}
 	if _, err := os.Stat(initsqlSrc); err == nil {
 		initsqlDest := filepath.Join(g.outputDir, "inittables.sql")
 		if err := copyFile(initsqlSrc, initsqlDest); err != nil {

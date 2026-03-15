@@ -22,6 +22,7 @@ var cmdbCmd = &cobra.Command{
 		varsName, _ := cmd.Flags().GetString("vars")
 		resourcesName, _ := cmd.Flags().GetString("resources")
 		outputOverride, _ := cmd.Flags().GetString("output")
+		templateDirOverride, _ := cmd.Flags().GetString("template-dir")
 
 		// 如果未指定工作目录，使用当前目录
 		if workDir == "" {
@@ -98,16 +99,15 @@ var cmdbCmd = &cobra.Command{
 		}
 
 		// 确定模板目录
-		// 优先使用工作目录下的 templates，如果不存在则使用程序所在目录的 templates
-		templateDir := filepath.Join(workDir, "templates")
-		if _, err := os.Stat(templateDir); os.IsNotExist(err) {
-			// 使用程序所在目录的 templates
-			execPath, _ := os.Executable()
-			templateDir = filepath.Join(filepath.Dir(execPath), "templates")
-		}
-		// 最后尝试当前目录的 templates
-		if _, err := os.Stat(templateDir); os.IsNotExist(err) {
-			templateDir = "templates"
+		// 优先使用用户指定的模板目录
+		templateDir := templateDirOverride
+		if templateDir == "" {
+			// 默认使用 baseDir 的父目录下的 cmdb 目录
+			// 例如：baseDir=/path/to/gitlab_cfg -> templateDir=/path/to/cmdb
+			cmdbDir := filepath.Join(baseDir, "..", "cmdb")
+			if absCmdbDir, err := filepath.Abs(cmdbDir); err == nil {
+				templateDir = absCmdbDir
+			}
 		}
 
 		fmt.Printf("\n配置信息：\n")
@@ -157,4 +157,5 @@ func init() {
 	cmdbCmd.Flags().String("vars", "", "vars 文件名（默认：configs/vars.yaml）")
 	cmdbCmd.Flags().String("resources", "", "resources 文件名（默认：configs/resources.yaml）")
 	cmdbCmd.Flags().StringP("output", "o", "", "输出目录（默认使用 vars.yaml 中的 rootdir 或 ./out）")
+	cmdbCmd.Flags().String("template-dir", "", "CMDB 模板目录（默认为 base-dir/../cmdb）")
 }
