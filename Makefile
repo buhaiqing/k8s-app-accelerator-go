@@ -30,9 +30,6 @@ PYTHON := python3
 PYTHON_SCRIPT := $(SCRIPTS_DIR)/render_worker.py
 PYTHON_REQUIREMENTS := $(SCRIPTS_DIR)/requirements.txt
 
-# 配置文件示例（可选）
-# CONFIG_EXAMPLES := configs/vars.example.yaml configs/resources.example.yaml
-
 # 平台支持
 PLATFORMS := darwin-amd64 darwin-arm64 linux-amd64 linux-arm64 windows-amd64
 
@@ -169,7 +166,6 @@ darwin-amd64: ## 构建 macOS AMD64 版本
 	@mkdir -p $(DIST_DIR)/darwin-amd64
 	GOOS=darwin GOARCH=amd64 $(GO) build $(GO_LDFLAGS) -o $(DIST_DIR)/darwin-amd64/$(BINARY_NAME) cmd/main.go
 	@cp -r $(SCRIPTS_DIR) $(DIST_DIR)/darwin-amd64/
-	@cp -r $(CONFIG_EXAMPLES) $(DIST_DIR)/darwin-amd64/configs/ 2>/dev/null || true
 	@echo "$(COLOR_GREEN)✓ darwin-amd64 构建完成$(COLOR_RESET)"
 
 # macOS ARM64 (Apple Silicon)
@@ -179,7 +175,6 @@ darwin-arm64: ## 构建 macOS ARM64 版本
 	@mkdir -p $(DIST_DIR)/darwin-arm64
 	GOOS=darwin GOARCH=arm64 $(GO) build $(GO_LDFLAGS) -o $(DIST_DIR)/darwin-arm64/$(BINARY_NAME) cmd/main.go
 	@cp -r $(SCRIPTS_DIR) $(DIST_DIR)/darwin-arm64/
-	@cp -r $(CONFIG_EXAMPLES) $(DIST_DIR)/darwin-arm64/configs/ 2>/dev/null || true
 	@echo "$(COLOR_GREEN)✓ darwin-arm64 构建完成$(COLOR_RESET)"
 
 # Linux AMD64
@@ -189,7 +184,6 @@ linux-amd64: ## 构建 Linux AMD64 版本
 	@mkdir -p $(DIST_DIR)/linux-amd64
 	GOOS=linux GOARCH=amd64 $(GO) build $(GO_LDFLAGS) -o $(DIST_DIR)/linux-amd64/$(BINARY_NAME) cmd/main.go
 	@cp -r $(SCRIPTS_DIR) $(DIST_DIR)/linux-amd64/
-	@cp -r $(CONFIG_EXAMPLES) $(DIST_DIR)/linux-amd64/configs/ 2>/dev/null || true
 	@echo "$(COLOR_GREEN)✓ linux-amd64 构建完成$(COLOR_RESET)"
 
 # Linux ARM64
@@ -199,7 +193,6 @@ linux-arm64: ## 构建 Linux ARM64 版本
 	@mkdir -p $(DIST_DIR)/linux-arm64
 	GOOS=linux GOARCH=arm64 $(GO) build $(GO_LDFLAGS) -o $(DIST_DIR)/linux-arm64/$(BINARY_NAME) cmd/main.go
 	@cp -r $(SCRIPTS_DIR) $(DIST_DIR)/linux-arm64/
-	@cp -r $(CONFIG_EXAMPLES) $(DIST_DIR)/linux-arm64/configs/ 2>/dev/null || true
 	@echo "$(COLOR_GREEN)✓ linux-arm64 构建完成$(COLOR_RESET)"
 
 # Windows AMD64
@@ -209,7 +202,6 @@ windows-amd64: ## 构建 Windows AMD64 版本
 	@mkdir -p $(DIST_DIR)/windows-amd64
 	GOOS=windows GOARCH=amd64 $(GO) build $(GO_LDFLAGS) -o $(DIST_DIR)/windows-amd64/$(BINARY_NAME).exe cmd/main.go
 	@cp -r $(SCRIPTS_DIR) $(DIST_DIR)/windows-amd64/
-	@cp -r $(CONFIG_EXAMPLES) $(DIST_DIR)/windows-amd64/configs/ 2>/dev/null || true
 	@echo "$(COLOR_GREEN)✓ windows-amd64 构建完成$(COLOR_RESET)"
 
 # ==============================================================================
@@ -236,8 +228,7 @@ package-single: build ## 打包当前平台
 	@mkdir -p $(DIST_DIR)
 	@cp -r $(BUILD_DIR)/$(BINARY_NAME) $(DIST_DIR)/
 	@cp -r $(SCRIPTS_DIR) $(DIST_DIR)/
-	@cp -r $(CONFIG_EXAMPLES) $(DIST_DIR)/configs/ 2>/dev/null || true
-	@cd $(DIST_DIR) && tar -czvf $(PROJECT_NAME)-latest.tar.gz $(BINARY_NAME) $(SCRIPTS_DIR) configs/
+	@cd $(DIST_DIR) && tar -czvf $(PROJECT_NAME)-latest.tar.gz $(BINARY_NAME) $(SCRIPTS_DIR)
 	@echo "$(COLOR_GREEN)✓ 打包完成：$(DIST_DIR)/$(PROJECT_NAME)-latest.tar.gz$(COLOR_RESET)"
 
 # ==============================================================================

@@ -69,7 +69,6 @@ WORKDIR /app
 COPY --from=builder-go /build/k8s-gen /app/k8s-gen
 COPY --from=builder-python /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
 COPY --chown=appuser:appgroup scripts/ /app/scripts/
-COPY --chown=appuser:appgroup configs/ /app/configs/
 
 # 设置执行权限
 RUN chmod +x /app/k8s-gen
