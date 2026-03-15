@@ -30,8 +30,8 @@ PYTHON := python3
 PYTHON_SCRIPT := $(SCRIPTS_DIR)/render_worker.py
 PYTHON_REQUIREMENTS := $(SCRIPTS_DIR)/requirements.txt
 
-# 配置文件示例
-CONFIG_EXAMPLES := configs/vars.example.yaml configs/resources.example.yaml configs/mapping.example.yaml
+# 配置文件示例（可选）
+# CONFIG_EXAMPLES := configs/vars.example.yaml configs/resources.example.yaml
 
 # 平台支持
 PLATFORMS := darwin-amd64 darwin-arm64 linux-amd64 linux-arm64 windows-amd64
@@ -145,14 +145,14 @@ test-all: test test-python ## 运行所有测试（Go + Python）
 build: ## 构建当前平台的二进制文件
 	@echo "$(COLOR_BLUE)[Build] 构建 $(BINARY_NAME)...$(COLOR_RESET)"
 	@mkdir -p $(BUILD_DIR)
-	@$(GO) build $(GO_LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME) main.go
+	@$(GO) build $(GO_LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME) cmd/main.go
 	@echo "$(COLOR_GREEN)✓ 构建完成：$(BUILD_DIR)/$(BINARY_NAME)$(COLOR_RESET)"
 
 .PHONY: build-debug
 build-debug: ## 构建调试版本（包含调试符号）
 	@echo "$(COLOR_BLUE)[Build] 构建调试版本...$(COLOR_RESET)"
 	@mkdir -p $(BUILD_DIR)
-	@$(GO) build -gcflags "all=-N -l" -o $(BUILD_DIR)/$(BINARY_NAME)-debug main.go
+	@$(GO) build -gcflags "all=-N -l" -o $(BUILD_DIR)/$(BINARY_NAME)-debug cmd/main.go
 	@echo "$(COLOR_GREEN)✓ 调试版本构建完成：$(BUILD_DIR)/$(BINARY_NAME)-debug$(COLOR_RESET)"
 
 # ==============================================================================
@@ -167,7 +167,7 @@ build-all: $(PLATFORMS) ## 构建所有支持的平台
 darwin-amd64: ## 构建 macOS AMD64 版本
 	@echo "$(COLOR_BLUE)[Build] 构建 darwin-amd64...$(COLOR_RESET)"
 	@mkdir -p $(DIST_DIR)/darwin-amd64
-	GOOS=darwin GOARCH=amd64 $(GO) build $(GO_LDFLAGS) -o $(DIST_DIR)/darwin-amd64/$(BINARY_NAME) main.go
+	GOOS=darwin GOARCH=amd64 $(GO) build $(GO_LDFLAGS) -o $(DIST_DIR)/darwin-amd64/$(BINARY_NAME) cmd/main.go
 	@cp -r $(SCRIPTS_DIR) $(DIST_DIR)/darwin-amd64/
 	@cp -r $(CONFIG_EXAMPLES) $(DIST_DIR)/darwin-amd64/configs/ 2>/dev/null || true
 	@echo "$(COLOR_GREEN)✓ darwin-amd64 构建完成$(COLOR_RESET)"
@@ -177,7 +177,7 @@ darwin-amd64: ## 构建 macOS AMD64 版本
 darwin-arm64: ## 构建 macOS ARM64 版本
 	@echo "$(COLOR_BLUE)[Build] 构建 darwin-arm64...$(COLOR_RESET)"
 	@mkdir -p $(DIST_DIR)/darwin-arm64
-	GOOS=darwin GOARCH=arm64 $(GO) build $(GO_LDFLAGS) -o $(DIST_DIR)/darwin-arm64/$(BINARY_NAME) main.go
+	GOOS=darwin GOARCH=arm64 $(GO) build $(GO_LDFLAGS) -o $(DIST_DIR)/darwin-arm64/$(BINARY_NAME) cmd/main.go
 	@cp -r $(SCRIPTS_DIR) $(DIST_DIR)/darwin-arm64/
 	@cp -r $(CONFIG_EXAMPLES) $(DIST_DIR)/darwin-arm64/configs/ 2>/dev/null || true
 	@echo "$(COLOR_GREEN)✓ darwin-arm64 构建完成$(COLOR_RESET)"
@@ -187,7 +187,7 @@ darwin-arm64: ## 构建 macOS ARM64 版本
 linux-amd64: ## 构建 Linux AMD64 版本
 	@echo "$(COLOR_BLUE)[Build] 构建 linux-amd64...$(COLOR_RESET)"
 	@mkdir -p $(DIST_DIR)/linux-amd64
-	GOOS=linux GOARCH=amd64 $(GO) build $(GO_LDFLAGS) -o $(DIST_DIR)/linux-amd64/$(BINARY_NAME) main.go
+	GOOS=linux GOARCH=amd64 $(GO) build $(GO_LDFLAGS) -o $(DIST_DIR)/linux-amd64/$(BINARY_NAME) cmd/main.go
 	@cp -r $(SCRIPTS_DIR) $(DIST_DIR)/linux-amd64/
 	@cp -r $(CONFIG_EXAMPLES) $(DIST_DIR)/linux-amd64/configs/ 2>/dev/null || true
 	@echo "$(COLOR_GREEN)✓ linux-amd64 构建完成$(COLOR_RESET)"
@@ -197,7 +197,7 @@ linux-amd64: ## 构建 Linux AMD64 版本
 linux-arm64: ## 构建 Linux ARM64 版本
 	@echo "$(COLOR_BLUE)[Build] 构建 linux-arm64...$(COLOR_RESET)"
 	@mkdir -p $(DIST_DIR)/linux-arm64
-	GOOS=linux GOARCH=arm64 $(GO) build $(GO_LDFLAGS) -o $(DIST_DIR)/linux-arm64/$(BINARY_NAME) main.go
+	GOOS=linux GOARCH=arm64 $(GO) build $(GO_LDFLAGS) -o $(DIST_DIR)/linux-arm64/$(BINARY_NAME) cmd/main.go
 	@cp -r $(SCRIPTS_DIR) $(DIST_DIR)/linux-arm64/
 	@cp -r $(CONFIG_EXAMPLES) $(DIST_DIR)/linux-arm64/configs/ 2>/dev/null || true
 	@echo "$(COLOR_GREEN)✓ linux-arm64 构建完成$(COLOR_RESET)"
@@ -207,7 +207,7 @@ linux-arm64: ## 构建 Linux ARM64 版本
 windows-amd64: ## 构建 Windows AMD64 版本
 	@echo "$(COLOR_BLUE)[Build] 构建 windows-amd64...$(COLOR_RESET)"
 	@mkdir -p $(DIST_DIR)/windows-amd64
-	GOOS=windows GOARCH=amd64 $(GO) build $(GO_LDFLAGS) -o $(DIST_DIR)/windows-amd64/$(BINARY_NAME).exe main.go
+	GOOS=windows GOARCH=amd64 $(GO) build $(GO_LDFLAGS) -o $(DIST_DIR)/windows-amd64/$(BINARY_NAME).exe cmd/main.go
 	@cp -r $(SCRIPTS_DIR) $(DIST_DIR)/windows-amd64/
 	@cp -r $(CONFIG_EXAMPLES) $(DIST_DIR)/windows-amd64/configs/ 2>/dev/null || true
 	@echo "$(COLOR_GREEN)✓ windows-amd64 构建完成$(COLOR_RESET)"
@@ -279,7 +279,7 @@ run-generate: build ## 运行生成功能
 .PHONY: dev
 dev: ## 开发模式运行（go run）
 	@echo "$(COLOR_BLUE)[Dev] 开发模式运行...$(COLOR_RESET)"
-	@$(GO) run main.go --help
+	@$(GO) run cmd/main.go --help
 
 # ==============================================================================
 # Docker 相关
@@ -382,14 +382,14 @@ check: ## 检查环境
 .PHONY: compare
 compare: ## 对比 Go 和 Ansible 的生成物
 	@echo "$(COLOR_BLUE)[Compare] 运行对比检测...$(COLOR_RESET)"
-	@./scripts/compare_gitlab_cfg_outputs.sh
+	@./scripts/compare_harness.sh
 	@echo ""
-	@echo "$(COLOR_GREEN)✓ 对比完成，查看报告：COMPARISON_LATEST.md$(COLOR_RESET)"
+	@echo "$(COLOR_GREEN)✓ 对比完成$(COLOR_RESET)"
 
 .PHONY: compare-quick
 compare-quick: ## 快速对比（仅显示摘要）
 	@echo "$(COLOR_BLUE)[Compare] 快速对比...$(COLOR_RESET)"
-	@./scripts/compare_gitlab_cfg_outputs.sh 2>&1 | grep -A 50 "对比完成总结"
+	@./scripts/compare_harness.sh 2>&1 | tail -20
 
 .PHONY: compare-clean
 compare-clean: ## 清理对比文件
