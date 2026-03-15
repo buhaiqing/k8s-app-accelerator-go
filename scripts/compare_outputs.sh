@@ -79,6 +79,7 @@ NC='\033[0m' # No Color
 TOTAL_FILES_ANSIBLE=0
 TOTAL_FILES_GO=0
 IDENTICAL_FILES=0
+TOLERATED_FILES=0
 DIFFERENT_FILES=0
 MISSING_FILES=0
 
@@ -676,6 +677,7 @@ compare_file_contents() {
     
     # 更新全局统计变量
     IDENTICAL_FILES=${identical_count}
+    TOLERATED_FILES=${tolerated_count}
     DIFFERENT_FILES=${different_count}
     MISSING_FILES=${missing_count}
     
@@ -683,7 +685,7 @@ compare_file_contents() {
     echo -e "${CYAN}内容对比统计:${NC}"
     echo "─────────────────────────────────────────"
     print_success "完全一致的文件: ${IDENTICAL_FILES}"
-    print_success "容错一致的文件: ${tolerated_count} (仅末尾空行/随机值差异)"
+    print_success "容错一致的文件: ${TOLERATED_FILES} (仅末尾空行/随机值差异)"
     print_warning "内容有差异的文件: ${DIFFERENT_FILES}"
     print_error "缺失的文件: ${MISSING_FILES}"
     
@@ -917,12 +919,14 @@ print_final_summary() {
     echo "  Go 文件总数:      ${TOTAL_FILES_GO}"
     echo ""
     echo -e "  ${GREEN}✅ 完全一致:      ${IDENTICAL_FILES} 个${NC}"
+    echo -e "  ${GREEN}⚠️  容错一致:      ${TOLERATED_FILES} 个 (末尾空行/随机值)${NC}"
     echo -e "  ${YELLOW}⚠️  内容差异:      ${DIFFERENT_FILES} 个${NC}"
     echo -e "  ${RED}❌ 缺失文件:      ${MISSING_FILES} 个${NC}"
     echo ""
     
     if [ "${TOTAL_FILES_GO}" -gt 0 ]; then
-        local consistency=$(awk "BEGIN {printf \"%.1f\", (${IDENTICAL_FILES}/${TOTAL_FILES_GO})*100}")
+        local total_matched=$((IDENTICAL_FILES + TOLERATED_FILES))
+        local consistency=$(awk "BEGIN {printf \"%.1f\", (${total_matched}/${TOTAL_FILES_GO})*100}")
         echo -e "  ${GREEN}一致性比例:      ${consistency}%${NC}"
     fi
     
