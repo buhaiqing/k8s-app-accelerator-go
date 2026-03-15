@@ -518,55 +518,55 @@ compare_file_lists() {
 }
 
 # ============================================
-# 智能文件对比函数
+# 智能文件对比函数（修复版）
 # 支持忽略：
-# 1. 末尾空行差异（1个或多个换行符）
-# 2. UUID/随机Hex值（如 dbupgrade-xxx-3e7bd6e）
+# 1. 末尾空行差异
+# 2. 行尾空格差异
+# 3. UUID/随机Hex值（如 dbupgrade-xxx-3e7bd6e）
+# 4. CMDB 资源 ID 随机值
+# 返回：0 表示一致，1 表示有差异
 # ============================================
 smart_compare_files() {
     local file1="$1"
     local file2="$2"
-    
+
+    if [ ! -f "$file1" ] || [ ! -f "$file2" ]; then
+        return 1
+    fi
+
     # 创建临时文件
     local tmp1=$(mktemp)
     local tmp2=$(mktemp)
-    
-    # 预处理文件1：去除末尾空行
-    sed -E ':a; /^\n*$/d; /\n$/!b; N; ba' "${file1}" > "${tmp1}" 2>/dev/null || cat "${file1}" > "${tmp1}"
-    
-    # 预处理文件2：去除末尾空行  
-    sed -E ':a; /^\n*$/d; /\n$/!b; N; ba' "${file2}" > "${tmp2}" 2>/dev/null || cat "${file2}" > "${tmp2}"
-    
-    # 去除末尾空行（更简单的方法）
-    sed -i '/^[[:space:]]*$/d' "${tmp1}" 2>/dev/null || true
-    sed -i '/^[[:space:]]*$/d' "${tmp2}" 2>/dev/null || true
-    
-    # 去除行尾空格
-    sed -i 's/[[:space:]]*$//' "${tmp1}" 2>/dev/null || true
-    sed -i 's/[[:space:]]*$//' "${tmp2}" 2>/dev/null || true
-    
-    # 标准化 UUID/Hex 随机值（用于 job.yaml 中的 name 字段）
-    # 匹配模式：dbupgrade-xxx-随机7位hex
-    # 例如：dbupgrade-cms-service-3e7bd6e -> dbupgrade-cms-service-XXXXXXX
-    local ntmp1=$(mktemp)
-    local ntmp2=$(mktemp)
-    
-    # 标准化 file1 中的随机值
-    sed -E 's/(dbupgrade-[a-zA-Z0-9-]+-)[0-9a-f]{7}/\1XXXXXXX/g' "${tmp1}" > "${ntmp1}"
-    
-    # 标准化 file2 中的随机值
-    sed -E 's/(dbupgrade-[a-zA-Z0-9-]+-)[0-9a-f]{7}/\1XXXXXXX/g' "${tmp2}" > "${ntmp2}"
-    
-    # 对比预处理后的文件
-    local result=0
-    cmp -s "${ntmp1}" "${ntmp2}" || result=$?
-    
-    # 清理临时文件
-    rm -f "${tmp1}" "${tmp2}" "${ntmp1}" "${ntmp2}"
-    
-    return ${result}
-}
 
+    # 预处理：去除末尾空行和行尾空格
+    sed 's/[[:space:]]*$//' "$file1" | sed '/^[[:space:]]*$/d' > "$tmp1"
+    sed 's/[[:space:]]*$//' "$file2" | sed '/^[[:space:]]*$/d' > "$tmp2"
+
+    # 标准化随机值（使用管道链接多个 sed 命令）
+    local norm1=$(cat "$tmp1" | \
+        sed -E 's/(dbupgrade-[a-zA-Z0-9-]+-)[0-9a-f]{7}/\1XXXXXXX/g' | \
+        sed -E 's/(production|int|test)-rds-[0-9]+/\1-rds-XXXX/g' | \
+        sed -E 's/(production|int|test)-pg-[0-9]+/\1-pg-XXXX/g' | \
+        sed -E 's/(production|int|test)-mongo-[0-9]+/\1-mongo-XXXX/g' | \
+        sed -E 's/(rdsdb|pddb|dds)[0-9]+/\1XXXX/g')
+
+    local norm2=$(cat "$tmp2" | \
+        sed -E 's/(dbupgrade-[a-zA-Z0-9-]+-)[0-9a-f]{7}/\1XXXXXXX/g' | \
+        sed -E 's/(production|int|test)-rds-[0-9]+/\1-rds-XXXX/g' | \
+        sed -E 's/(production|int|test)-pg-[0-9]+/\1-pg-XXXX/g' | \
+        sed -E 's/(production|int|test)-mongo-[0-9]+/\1-mongo-XXXX/g' | \
+        sed -E 's/(rdsdb|pddb|dds)[0-9]+/\1XXXX/g')
+
+    # 清理临时文件
+    rm -f "$tmp1" "$tmp2"
+
+    # 对比标准化后的内容
+    if [ "$norm1" = "$norm2" ]; then
+        return 0
+    else
+        return 1
+    fi
+}
 # 获取智能对比的详细差异
 smart_diff_files() {
     local file1="$1"
@@ -583,8 +583,25 @@ smart_diff_files() {
     # 标准化随机值
     local ntmp1=$(mktemp)
     local ntmp2=$(mktemp)
+    # 1. dbupgrade-xxx-随机7位hex
     sed -E 's/(dbupgrade-[a-zA-Z0-9-]+-)[0-9a-f]{7}/\1XXXXXXX/g' "${tmp1}" > "${ntmp1}"
     sed -E 's/(dbupgrade-[a-zA-Z0-9-]+-)[0-9a-f]{7}/\1XXXXXXX/g' "${tmp2}" > "${ntmp2}"
+    # 2. production-rds-随机数字
+    sed -E 's/(production-rds-)[0-9]+/\1XXXXX/g' "${ntmp1}" > "${tmp1}"
+    sed -E 's/(production-rds-)[0-9]+/\1XXXXX/g' "${ntmp2}" > "${tmp2}"
+    # 3. production-pg-随机数字
+    sed -E 's/(production-pg-)[0-9]+/\1XXXXX/g' "${tmp1}" > "${ntmp1}"
+    sed -E 's/(production-pg-)[0-9]+/\1XXXXX/g' "${tmp2}" > "${ntmp2}"
+    # 4. production-mongo-随机数字
+    sed -E 's/(production-mongo-)[0-9]+/\1XXXXX/g' "${ntmp1}" > "${tmp1}"
+    sed -E 's/(production-mongo-)[0-9]+/\1XXXXX/g' "${ntmp2}" > "${tmp2}"
+    # 5. rdsdb/pddb/dds 随机数字
+    sed -E 's/(rdsdb)[0-9]+/\1XXXXX/g' "${tmp1}" > "${ntmp1}"
+    sed -E 's/(rdsdb)[0-9]+/\1XXXXX/g' "${tmp2}" > "${ntmp2}"
+    sed -E 's/(pddb)[0-9]+/\1XXXX/g' "${ntmp1}" > "${tmp1}"
+    sed -E 's/(pddb)[0-9]+/\1XXXX/g' "${ntmp2}" > "${tmp2}"
+    sed -E 's/(dds)[0-9]+/\1XXXX/g' "${ntmp1}" > "${ntmp1}"
+    sed -E 's/(dds)[0-9]+/\1XXXX/g' "${ntmp2}" > "${ntmp2}"
     
     # 输出差异
     diff -u "${ntmp1}" "${ntmp2}"
@@ -598,7 +615,7 @@ smart_diff_files() {
 # ============================================
 compare_file_contents() {
     print_section "对比文件内容 (智能模式)"
-    print_info "忽略规则: 末尾空行差异、UUID/随机Hex值差异"
+    print_info "忽略规则: 末尾空行差异、UUID/随机Hex值差异、CMDB资源ID随机值"
     echo ""
     
     local identical_file="${COMPARISON_DIR}/identical_files_${TIMESTAMP}.txt"

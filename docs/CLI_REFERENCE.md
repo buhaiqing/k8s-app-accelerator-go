@@ -52,10 +52,10 @@ k8s-gen <command> [flags]
 
 ```bash
 # 标准方式（推荐）
-go run cmd/main.go generate --base-dir /path/to/configs
+go run . generate --base-dir /path/to/configs
 
 # 指定工作目录
-go run cmd/main.go generate \
+go run . generate \
   --workdir /path/to/project \
   --base-dir configs
 ```
@@ -63,7 +63,7 @@ go run cmd/main.go generate \
 #### 自定义配置文件名
 
 ```bash
-go run cmd/main.go generate \
+go run . generate \
   --base-dir /path/to/configs \
   --bootstrap bootstrap-test.yml \
   --vars vars-test.yaml \
@@ -74,7 +74,7 @@ go run cmd/main.go generate \
 #### 生成指定的 roles
 
 ```bash
-go run cmd/main.go generate \
+go run . generate \
   --base-dir configs \
   --roles cms-service,fms-service
 ```
@@ -100,10 +100,10 @@ output/
 
 ```bash
 # 批量生成所有应用
-go run cmd/main.go argocd generate --base-dir /path/to/configs
+go run . argocd generate --base-dir /path/to/configs
 
 # 指定输出目录
-go run cmd/main.go argocd generate \
+go run . argocd generate \
   --base-dir configs \
   -o output/argo-app
 ```
@@ -111,7 +111,7 @@ go run cmd/main.go argocd generate \
 #### 生成指定的应用
 
 ```bash
-go run cmd/main.go argocd generate \
+go run . argocd generate \
   --base-dir configs \
   --roles gateway-service,config-service
 ```
@@ -119,7 +119,7 @@ go run cmd/main.go argocd generate \
 #### 跳过预检
 
 ```bash
-go run cmd/main.go argocd generate \
+go run . argocd generate \
   --base-dir configs \
   --skip-precheck
 ```
@@ -165,10 +165,10 @@ profile: int  # 可选，覆盖所有 role 的 profile
 
 ```bash
 # 批量生成所有产品
-go run cmd/main.go jenkins generate --base-dir /path/to/configs
+go run . jenkins generate --base-dir /path/to/configs
 
 # 指定输出目录
-go run cmd/main.go jenkins generate \
+go run . jenkins generate \
   --base-dir configs \
   -o output/jenkins
 ```
@@ -176,7 +176,7 @@ go run cmd/main.go jenkins generate \
 #### 生成指定的产品
 
 ```bash
-go run cmd/main.go jenkins generate \
+go run . jenkins generate \
   --base-dir configs \
   --roles baas,mas,cms
 ```
@@ -184,7 +184,7 @@ go run cmd/main.go jenkins generate \
 #### 跳过预检
 
 ```bash
-go run cmd/main.go jenkins generate \
+go run . jenkins generate \
   --base-dir configs \
   --skip-precheck
 ```
@@ -235,10 +235,10 @@ data:
 
 ```bash
 # 生成 SQL 脚本
-go run cmd/main.go cmdb --base-dir /path/to/configs
+go run . cmdb --base-dir /path/to/configs
 
 # 指定输出目录
-go run cmd/main.go cmdb \
+go run . cmdb \
   --base-dir configs \
   -o output/cmdb
 ```
@@ -246,7 +246,7 @@ go run cmd/main.go cmdb \
 #### 自定义配置文件名
 
 ```bash
-go run cmd/main.go cmdb \
+go run . cmdb \
   --base-dir configs \
   --vars vars-prod.yaml \
   --resources resources-prod.yaml
@@ -288,10 +288,10 @@ rds:
 
 ```bash
 # 预检配置文件
-go run cmd/main.go precheck --base-dir /path/to/configs
+go run . precheck --base-dir /path/to/configs
 
 # 查看详细日志
-go run cmd/main.go precheck \
+go run . precheck \
   --base-dir configs \
   --verbose
 ```
@@ -321,7 +321,7 @@ go run cmd/main.go precheck \
 使用 `--roles` flag 指定要生成的 roles：
 
 ```bash
-go run cmd/main.go generate \
+go run . generate \
   --base-dir configs \
   --roles app1,app2,app3
 ```
@@ -331,7 +331,7 @@ go run cmd/main.go generate \
 在紧急情况下可以使用 `--skip-precheck`：
 
 ```bash
-go run cmd/main.go generate \
+go run . generate \
   --base-dir configs \
   --skip-precheck
 ```
@@ -343,7 +343,7 @@ go run cmd/main.go generate \
 添加 `-v` 或 `--verbose` flag：
 
 ```bash
-go run cmd/main.go generate \
+go run . generate \
   --base-dir configs \
   --verbose
 ```
@@ -362,7 +362,7 @@ profile: production  # 或 int, uat
 默认在当前目录的 `output/` 下，可以通过 `-o` 指定：
 
 ```bash
-go run cmd/main.go generate \
+go run . generate \
   --base-dir configs \
   -o /tmp/output
 ```
@@ -387,10 +387,10 @@ project-root/
 
 ```bash
 # 步骤 1: 预检
-go run cmd/main.go precheck --base-dir configs
+go run . precheck --base-dir configs
 
 # 步骤 2: 生成
-go run cmd/main.go generate --base-dir configs
+go run . generate --base-dir configs
 ```
 
 ### 3. 使用 Makefile 简化操作
@@ -399,10 +399,10 @@ go run cmd/main.go generate --base-dir configs
 .PHONY: generate precheck
 
 generate:
-	go run cmd/main.go generate --base-dir configs
+	go run . generate --base-dir configs
 
 precheck:
-	go run cmd/main.go precheck --base-dir configs
+	go run . precheck --base-dir configs
 ```
 
 ### 4. 批量处理多个环境
@@ -410,7 +410,7 @@ precheck:
 ```bash
 # 为不同环境生成配置
 for profile in int production; do
-  go run cmd/main.go generate \
+  go run . generate \
     --base-dir configs \
     -o output/${profile}
 done

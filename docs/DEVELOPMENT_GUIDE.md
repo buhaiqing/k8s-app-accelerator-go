@@ -85,10 +85,10 @@ python3 -c "import jinja2; print(f'Jinja2 {jinja2.__version__}')"
 
 ```bash
 # 运行预检
-go run cmd/main.go precheck --base-dir configs
+go run . precheck --base-dir configs
 
 # 查看详细日志
-go run cmd/main.go precheck \
+go run . precheck \
   --base-dir configs \
   --verbose
 ```
@@ -97,13 +97,13 @@ go run cmd/main.go precheck \
 
 ```bash
 # 生成 K8s 配置
-go run cmd/main.go generate --base-dir configs
+go run . generate --base-dir configs
 
 # 生成 ArgoCD 配置
-go run cmd/main.go argocd generate --base-dir configs
+go run . argocd generate --base-dir configs
 
 # 生成 Jenkins 配置
-go run cmd/main.go jenkins generate --base-dir configs
+go run . jenkins generate --base-dir configs
 ```
 
 ---
@@ -191,7 +191,7 @@ k8s-app-accelerator-go/
 
 ```bash
 # 添加 -v flag
-go run cmd/main.go generate \
+go run . generate \
   --base-dir configs \
   --verbose
 ```
@@ -200,7 +200,7 @@ go run cmd/main.go generate \
 
 ```bash
 # 只生成一个应用
-go run cmd/main.go generate \
+go run . generate \
   --base-dir configs \
   --roles gateway-service
 ```

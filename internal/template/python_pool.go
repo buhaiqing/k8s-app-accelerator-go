@@ -3,37 +3,35 @@ package template
 import (
 	"fmt"
 	"sync"
+	"sync/atomic"
+	"time"
 )
 
-// WorkerPool Python Worker 进程池
 type WorkerPool struct {
 	workers    []*PythonWorker
-	current    int
-	mutex      sync.Mutex
+	current    uint64
+	mutex      sync.RWMutex
 	scriptPath string
 	size       int
+	blacklist  map[int]time.Time
+	blackMu    sync.RWMutex
 }
 
-// NewWorkerPool 创建 Worker 池
-// count: Worker 数量（推荐 5 个）
-// scriptPath: render_worker.py 的路径
 func NewWorkerPool(count int, scriptPath string) (*WorkerPool, error) {
 	if count <= 0 {
-		count = 5 // 默认 5 个 workers
+		count = 5
 	}
 
 	pool := &WorkerPool{
 		workers:    make([]*PythonWorker, count),
-		current:    0,
 		scriptPath: scriptPath,
 		size:       count,
+		blacklist:  make(map[int]time.Time),
 	}
 
-	// 初始化所有 workers
 	for i := 0; i < count; i++ {
 		worker, err := NewPythonWorker(scriptPath)
 		if err != nil {
-			// 清理已创建的 workers
 			pool.Close()
 			return nil, fmt.Errorf("创建 Worker %d 失败：%w", i, err)
 		}
@@ -43,43 +41,84 @@ func NewWorkerPool(count int, scriptPath string) (*WorkerPool, error) {
 	return pool, nil
 }
 
-// GetWorker 获取一个可用的 Worker
-// 使用轮询方式分配 Worker，实现负载均衡
 func (p *WorkerPool) GetWorker() *PythonWorker {
-	p.mutex.Lock()
-	defer p.mutex.Unlock()
+	p.mutex.RLock()
+	defer p.mutex.RUnlock()
 
-	// 轮询获取 worker
-	worker := p.workers[p.current]
-	p.current = (p.current + 1) % p.size
+	attempts := 0
+	maxAttempts := p.size * 2
 
-	return worker
-}
+	for attempts < maxAttempts {
+		idx := atomic.AddUint64(&p.current, 1) % uint64(p.size)
+		worker := p.workers[idx]
 
-// Render 使用 Worker 池渲染模板
-// 自动获取可用 worker 并处理重试
-func (p *WorkerPool) Render(req RenderRequest) (string, error) {
-	worker := p.GetWorker()
-	content, err := worker.Render(req)
-
-	if err != nil {
-		// 如果 worker 可能已失效，尝试其他 worker 重试
-		for i := 0; i < p.size-1; i++ {
-			worker = p.GetWorker()
-			if worker.IsAlive() {
-				content, err = worker.Render(req)
-				if err == nil {
-					return content, nil
-				}
-			}
+		if worker != nil && worker.IsAlive() && !p.isBlacklisted(worker.PID()) {
+			return worker
 		}
-		return "", fmt.Errorf("所有 Worker 都失败：%w", err)
+
+		attempts++
 	}
 
-	return content, nil
+	for _, worker := range p.workers {
+		if worker != nil && worker.IsAlive() {
+			return worker
+		}
+	}
+
+	return nil
 }
 
-// Close 关闭所有 Workers
+func (p *WorkerPool) isBlacklisted(pid int) bool {
+	p.blackMu.RLock()
+	defer p.blackMu.RUnlock()
+
+	if blacklistedAt, exists := p.blacklist[pid]; exists {
+		if time.Since(blacklistedAt) > 30*time.Second {
+			p.blackMu.RUnlock()
+			p.blackMu.Lock()
+			delete(p.blacklist, pid)
+			p.blackMu.Unlock()
+			p.blackMu.RLock()
+			return false
+		}
+		return true
+	}
+	return false
+}
+
+func (p *WorkerPool) addToBlacklist(pid int) {
+	p.blackMu.Lock()
+	defer p.blackMu.Unlock()
+	p.blacklist[pid] = time.Now()
+}
+
+func (p *WorkerPool) Render(req RenderRequest) (string, error) {
+	const maxRetries = 3
+	var lastErr error
+
+	for attempt := 0; attempt < maxRetries; attempt++ {
+		worker := p.GetWorker()
+		if worker == nil {
+			return "", fmt.Errorf("没有可用的 Worker")
+		}
+
+		content, err := worker.Render(req)
+		if err != nil {
+			lastErr = err
+			p.addToBlacklist(worker.PID())
+
+			if attempt < maxRetries-1 {
+				time.Sleep(time.Duration(attempt+1) * 100 * time.Millisecond)
+			}
+			continue
+		}
+
+		return content, nil
+	}
+
+	return "", fmt.Errorf("渲染失败（已重试 %d 次）：%w", maxRetries, lastErr)
+}
+
 func (p *WorkerPool) Close() {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
@@ -91,40 +130,43 @@ func (p *WorkerPool) Close() {
 	}
 }
 
-// Size 获取 Worker 池大小
 func (p *WorkerPool) Size() int {
 	return p.size
 }
 
-// HealthCheck 健康检查
-// 返回存活的 Worker 数量
 func (p *WorkerPool) HealthCheck() int {
+	p.mutex.RLock()
+	defer p.mutex.RUnlock()
+
 	aliveCount := 0
 	for _, worker := range p.workers {
-		if worker.IsAlive() {
+		if worker != nil && worker.IsAlive() {
 			aliveCount++
 		}
 	}
 	return aliveCount
 }
 
-// RestartDeadWorkers 重启已死亡的 Workers
 func (p *WorkerPool) RestartDeadWorkers() error {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+
 	var errors []error
 
 	for i, worker := range p.workers {
-		if !worker.IsAlive() {
-			// 关闭旧 worker
-			if err := worker.Close(); err != nil {
-				errors = append(errors, err)
+		if worker == nil || !worker.IsAlive() {
+			if worker != nil {
+				worker.Close()
 			}
 
-			// 创建新 worker
 			newWorker, err := NewPythonWorker(p.scriptPath)
 			if err != nil {
 				errors = append(errors, fmt.Errorf("重启 Worker %d 失败：%w", i, err))
 			} else {
 				p.workers[i] = newWorker
+				p.blackMu.Lock()
+				delete(p.blacklist, newWorker.PID())
+				p.blackMu.Unlock()
 			}
 		}
 	}
@@ -134,4 +176,28 @@ func (p *WorkerPool) RestartDeadWorkers() error {
 	}
 
 	return nil
+}
+
+func (p *WorkerPool) GetStats() map[string]interface{} {
+	p.mutex.RLock()
+	defer p.mutex.RUnlock()
+
+	aliveCount := 0
+	for _, worker := range p.workers {
+		if worker != nil && worker.IsAlive() {
+			aliveCount++
+		}
+	}
+
+	p.blackMu.RLock()
+	blacklistCount := len(p.blacklist)
+	p.blackMu.RUnlock()
+
+	return map[string]interface{}{
+		"total_workers":     p.size,
+		"alive_workers":     aliveCount,
+		"dead_workers":      p.size - aliveCount,
+		"blacklisted_count": blacklistCount,
+		"healthy_ratio":     float64(aliveCount) / float64(p.size),
+	}
 }

@@ -100,17 +100,24 @@ is_tolerated_diff() {
     sed 's/[[:space:]]*$//' "$file1" | sed '/^[[:space:]]*$/d' > "$tmp1" 2>/dev/null || cat "$file1" > "$tmp1"
     sed 's/[[:space:]]*$//' "$file2" | sed '/^[[:space:]]*$/d' > "$tmp2" 2>/dev/null || cat "$file2" > "$tmp2"
 
-    # 标准化随机值
-    sed -E 's/(production|int|test)-rds-[0-9]+/\1-rds-XXXX/g' "$tmp1" | \
-    sed -E 's/(production|int|test)-pg-[0-9]+/\1-pg-XXXX/g' | \
-    sed -E 's/(production|int|test)-mongo-[0-9]+/\1-mongo-XXXX/g' | \
-    sed -E 's/(rdsdb|pddb|dds)[0-9]+/\1XXXX/g' > "$tmp1.tmp"
+    # 标准化随机值（使用管道链接，避免临时文件混乱）
+    # 1. dbupgrade-xxx-随机7位hex（用于 job.yaml）
+    # 2. production|int|test-rds/pg/mongo-随机数字（用于 CMDB SQL）
+    # 3. rdsdb|pddb|dds随机数字（用于 CMDB SQL）
+    cat "$tmp1" | \
+        sed -E 's/(dbupgrade-[a-zA-Z0-9-]+-)[0-9a-f]{7}/\1XXXXXXX/g' | \
+        sed -E 's/(production|int|test)-rds-[0-9]+/\1-rds-XXXX/g' | \
+        sed -E 's/(production|int|test)-pg-[0-9]+/\1-pg-XXXX/g' | \
+        sed -E 's/(production|int|test)-mongo-[0-9]+/\1-mongo-XXXX/g' | \
+        sed -E 's/(rdsdb|pddb|dds)[0-9]+/\1XXXX/g' > "$tmp1.tmp"
     mv "$tmp1.tmp" "$tmp1"
 
-    sed -E 's/(production|int|test)-rds-[0-9]+/\1-rds-XXXX/g' "$tmp2" | \
-    sed -E 's/(production|int|test)-pg-[0-9]+/\1-pg-XXXX/g' | \
-    sed -E 's/(production|int|test)-mongo-[0-9]+/\1-mongo-XXXX/g' | \
-    sed -E 's/(rdsdb|pddb|dds)[0-9]+/\1XXXX/g' > "$tmp2.tmp"
+    cat "$tmp2" | \
+        sed -E 's/(dbupgrade-[a-zA-Z0-9-]+-)[0-9a-f]{7}/\1XXXXXXX/g' | \
+        sed -E 's/(production|int|test)-rds-[0-9]+/\1-rds-XXXX/g' | \
+        sed -E 's/(production|int|test)-pg-[0-9]+/\1-pg-XXXX/g' | \
+        sed -E 's/(production|int|test)-mongo-[0-9]+/\1-mongo-XXXX/g' | \
+        sed -E 's/(rdsdb|pddb|dds)[0-9]+/\1XXXX/g' > "$tmp2.tmp"
     mv "$tmp2.tmp" "$tmp2"
 
     local result=0
@@ -319,7 +326,7 @@ main() {
         echo "[1/3] 运行 Go 版本生成器..."
         cd "$PROJECT_ROOT"
 
-        if go run cmd/main.go cmdb \
+        if go run main.go cmdb \
             --base-dir "$BASE_DIR" \
             --vars "$VARS_FILE" \
             --resources "$RESOURCES_FILE" \

@@ -596,7 +596,7 @@ templates/cmdb/sql.j2  # 文件存在
 
 ```bash
 # 每次修改配置后运行
-go run cmd/main.go precheck --base-dir configs
+go run . precheck --base-dir configs
 ```
 
 ### 2. CI/CD 集成
@@ -604,7 +604,7 @@ go run cmd/main.go precheck --base-dir configs
 ```yaml
 # .github/workflows/ci.yml
 - name: Pre-check Configuration
-  run: go run cmd/main.go precheck --base-dir configs
+  run: go run . precheck --base-dir configs
 ```
 
 ### 3. 批量预检多个环境
@@ -612,7 +612,7 @@ go run cmd/main.go precheck --base-dir configs
 ```bash
 for env in int production; do
   echo "Checking $env..."
-  go run cmd/main.go precheck \
+  go run . precheck \
     --base-dir configs/$env
 done
 ```

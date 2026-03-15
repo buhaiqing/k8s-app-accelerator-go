@@ -1,16 +1,18 @@
 package generator
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 
-	"github.com/google/uuid"
 	"github.com/buhaiqing/k8s-app-accelerator-go/internal/config"
 	"github.com/buhaiqing/k8s-app-accelerator-go/internal/model"
 	"github.com/buhaiqing/k8s-app-accelerator-go/internal/template"
+	"github.com/google/uuid"
+	"golang.org/x/sync/errgroup"
 )
 
 // Generator 配置生成器
@@ -72,33 +74,52 @@ func (g *Generator) Close() {
 
 // GenerateAll 生成所有配置
 func (g *Generator) GenerateAll() error {
-	fmt.Printf("开始生成配置，共 %d 个应用...\n", len(g.roleVars))
+	return g.GenerateAllWithContext(context.Background())
+}
 
-	var wg sync.WaitGroup
-	errChan := make(chan error, len(g.roleVars))
+// GenerateAllWithContext 生成所有配置（支持上下文取消）
+func (gen *Generator) GenerateAllWithContext(ctx context.Context) error {
+	fmt.Printf("开始生成配置，共 %d 个应用...\n", len(gen.roleVars))
 
-	// 并发生成每个应用的配置
-	for _, roleVars := range g.roleVars {
-		wg.Add(1)
-		go func(rv *model.RoleVars) {
-			defer wg.Done()
+	// 使用 errgroup 管理并发和错误
+	// 设置并发限制为 10（避免资源耗尽）
+	eg, ctx := errgroup.WithContext(ctx)
+	eg.SetLimit(10)
 
-			if err := g.generateForApp(rv); err != nil {
-				errChan <- fmt.Errorf("生成 %s 配置失败：%w", rv.App, err)
+	// 收集所有错误
+	var errors []error
+	var errorMu sync.Mutex
+
+	for _, roleVars := range gen.roleVars {
+		rv := roleVars // 捕获变量
+
+		eg.Go(func() error {
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			default:
+				if err := gen.generateForApp(rv); err != nil {
+					err := fmt.Errorf("生成 %s 配置失败：%w", rv.App, err)
+					errorMu.Lock()
+					errors = append(errors, err)
+					errorMu.Unlock()
+					return err
+				}
+				return nil
 			}
-		}(roleVars)
+		})
 	}
 
 	// 等待所有任务完成
-	wg.Wait()
-	close(errChan)
-
-	// 检查是否有错误
-	if len(errChan) > 0 {
-		return <-errChan
+	if err := eg.Wait(); err != nil {
+		// 返回所有错误的汇总
+		if len(errors) > 0 {
+			return fmt.Errorf("生成配置失败（共 %d 个错误）：%v", len(errors), errors[0])
+		}
+		return err
 	}
 
-	fmt.Printf("✓ 成功生成 %d 个应用的配置\n", len(g.roleVars))
+	fmt.Printf("✓ 成功生成 %d 个应用的配置\n", len(gen.roleVars))
 	return nil
 }
 
@@ -213,8 +234,8 @@ func (g *Generator) generateForProfile(appName, product, profile string, roleVar
 
 		// DB 迁移配置（从 role vars 读取）
 		// 如果 roleVars.SetupImage 为空，则使用默认格式
-		"setup_image": getSetupImage(roleVars, harborProject),
-		"setup_db":    roleVars.SetupDB,
+		"setup_image":       getSetupImage(roleVars, harborProject),
+		"setup_db":          roleVars.SetupDB,
 		"setup_db_fallback": appName, // 如果 setup_db 为空则使用 app 名称
 
 		// DNET_PRODUCT（用于 Jenkins job 命名）

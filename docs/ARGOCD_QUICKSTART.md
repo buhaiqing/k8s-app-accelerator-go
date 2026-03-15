@@ -43,7 +43,7 @@ roles:
 cd /Users/bohaiqing/opensource/git/k8s-app-accelerator-go
 
 # 生成所有 ArgoCD Applications
-go run cmd/main.go argocd generate \
+go run . argocd generate \
   --base-dir . \
   --config configs/vars.yaml \
   --bootstrap bootstrap.yml
@@ -71,19 +71,19 @@ output/argo-app/
 ### 生成所有应用
 
 ```bash
-go run cmd/main.go argocd generate --base-dir .
+go run . argocd generate --base-dir .
 ```
 
 ### 只生成指定的应用
 
 ```bash
 # 单个应用
-go run cmd/main.go argocd generate \
+go run . argocd generate \
   --base-dir . \
   --roles cms-service
 
 # 多个应用
-go run cmd/main.go argocd generate \
+go run . argocd generate \
   --base-dir . \
   --roles cms-service,fms-service
 ```
@@ -91,7 +91,7 @@ go run cmd/main.go argocd generate \
 ### 跳过预检
 
 ```bash
-go run cmd/main.go argocd generate \
+go run . argocd generate \
   --base-dir . \
   --skip-precheck
 ```
@@ -99,7 +99,7 @@ go run cmd/main.go argocd generate \
 ### 查看详细日志
 
 ```bash
-go run cmd/main.go argocd generate \
+go run . argocd generate \
   --base-dir . \
   --verbose
 ```

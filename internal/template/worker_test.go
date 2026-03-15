@@ -90,7 +90,7 @@ combine: {{ (dict1 | combine(dict2)).key1 }},{{ (dict1 | combine(dict2)).key3 }}
 
 	assert.NoError(t, err)
 	assert.Contains(t, content, "mandatory: required")
-	assert.Contains(t, content, "profile: INT")
+	assert.Contains(t, content, "profile: Int") // 与 Ansible 兼容：int -> Int
 	assert.Contains(t, content, "ternary: enabled")
 	assert.Contains(t, content, "upper: HELLO")
 	assert.Contains(t, content, "lower: hello")

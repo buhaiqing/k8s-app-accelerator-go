@@ -27,7 +27,7 @@
 
 ```bash
 # 快速查询
-go run cmd/main.go --help
+go run . --help
 ```
 
 ---
@@ -78,7 +78,7 @@ go run cmd/main.go --help
 
 ```bash
 # 实践要求
-go run cmd/main.go precheck --base-dir configs
+go run . precheck --base-dir configs
 ```
 
 ---
