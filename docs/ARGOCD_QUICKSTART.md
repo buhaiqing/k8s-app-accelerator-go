@@ -195,7 +195,7 @@ k8s-app-accelerator-go/
 
 3. **运行对比测试**: 
    ```bash
-   bash scripts/compare_outputs.sh
+   bash scripts/compare_harness.sh
    ```
 
 ---

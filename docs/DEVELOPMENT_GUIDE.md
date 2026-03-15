@@ -222,7 +222,7 @@ python3 -c "from scripts.filters import *; print(ternary(True, 'yes', 'no'))"
 diff -r output/go output/ansible
 
 # 使用对比脚本（统一对比工具）
-bash scripts/compare_outputs.sh
+bash scripts/compare_harness.sh
 ```
 
 ---
