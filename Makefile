@@ -382,14 +382,14 @@ check: ## 检查环境
 .PHONY: compare
 compare: ## 对比 Go 和 Ansible 的生成物
 	@echo "$(COLOR_BLUE)[Compare] 运行对比检测...$(COLOR_RESET)"
-	@./scripts/compare_outputs.sh
+	@./scripts/compare_gitlab_cfg_outputs.sh
 	@echo ""
 	@echo "$(COLOR_GREEN)✓ 对比完成，查看报告：COMPARISON_LATEST.md$(COLOR_RESET)"
 
 .PHONY: compare-quick
 compare-quick: ## 快速对比（仅显示摘要）
 	@echo "$(COLOR_BLUE)[Compare] 快速对比...$(COLOR_RESET)"
-	@./scripts/compare_outputs.sh 2>&1 | grep -A 50 "对比完成总结"
+	@./scripts/compare_gitlab_cfg_outputs.sh 2>&1 | grep -A 50 "对比完成总结"
 
 .PHONY: compare-clean
 compare-clean: ## 清理对比文件

@@ -77,9 +77,12 @@ func runGenerateJenkins() error {
 	}
 
 	// 3. 创建输出目录
+	// outputPath 使用绝对路径
 	outputPath := jenkinsOutputDir
 	if !filepath.IsAbs(outputPath) {
-		outputPath = filepath.Join(baseDir, outputPath)
+		// 转换为绝对路径（相对于当前工作目录）
+		cwd, _ := os.Getwd()
+		outputPath = filepath.Join(cwd, jenkinsOutputDir)
 	}
 
 	if err := os.MkdirAll(outputPath, 0755); err != nil {
@@ -87,8 +90,10 @@ func runGenerateJenkins() error {
 	}
 
 	// 4. 创建生成器
-	scriptPath := filepath.Join(baseDir, "scripts", "render_worker.py")
-	templateDir := filepath.Join(baseDir, "templates", "jenkins-jobs")
+	// scriptPath：使用 Go 项目中的 Python 渲染脚本
+	scriptPath := filepath.Join(".", "scripts", "render_worker.py")
+	// templateDir：直接使用 Ansible roles 目录，不管理模板
+	templateDir := filepath.Join(baseDir, "roles")
 
 	gen, err := generator.NewJenkinsGenerator(
 		projectConfig,

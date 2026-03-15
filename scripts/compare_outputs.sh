@@ -1,49 +1,79 @@
 #!/bin/bash
 
 ################################################################################
-# K8s App Accelerator - Go vs Ansible 生成物对比脚本 (完整版)
+# K8s App Accelerator - 统一对比工具
 # 
-# 功能: 自动比对 Go 和 Ansible 实现的生成物，# 版本: v1.1.0
+# 功能：自动比对 GitLab Cfg 模块的 Go 实现和 Ansible 实现的生成物一致性
+# 版本：v1.3.0 - 统一对比工具（整合 ArgoCD + Jenkins + CMS）
 # 
 # 用法:
-#   ./scripts/compare_outputs.sh                                    # 使用默认路径（Go 输出为空时自动生成）
-#   ./scripts/compare_outputs.sh --no-auto-generate-go             # 禁用自动生成 Go 输出
+#   ./scripts/compare_outputs.sh                                    # 使用默认路径
+#   ./scripts/compare_outputs.sh --no-auto-generate-go             # 禁用自动生成
 #   ./scripts/compare_outputs.sh /path/to/ansible/output           # 指定 Ansible 输出
-#   ./scripts/compare_outputs.sh /path/to/ansible /path/to/go      # 指定两个输出路径
+#   ./scripts/compare_outputs.sh /path/to/ansible /path/to/go      # 指定两个输出
 #   ./scripts/compare_outputs.sh --help                             # 显示帮助
 #
-# 作者: K8s App Accelerator Team
-# 日期: 2026-03-14
+# Ansible 生成命令:
+#   cd /Users/bohaiqing/work/git/k8s_app_acelerator/gitlab_cfg
+#   ansible-playbook bootstrap-test.yml -e '@vars-test.yaml'
+#
+# Go 生成命令:
+#   cd /Users/bohaiqing/opensource/git/k8s-app-accelerator-go
+#   go run main.go gitlab-cfg generate --base-dir "${ANSIBLE_ROOT}" --config vars-test.yaml --skip-precheck
+#
+# 对比范围:
+#   - CMS K8s 配置 (deployment, service, config, hpa, job 等)
+#   - ArgoCD Application 配置
+#   - Jenkins Job 配置
+#
+# 作者：K8s App Accelerator Team
+# 日期：2026-03-15
+# 
+# 变更历史:
+#   v1.3.0 - 整合 ArgoCD 和 Jenkins 对比逻辑，统一为单一入口脚本
+#   v1.2.0 - 添加环境变量支持和改进帮助系统
 ################################################################################
 
 set -e  # 遇到错误立即退出
 
-# 版本信息
-VERSION="1.1.0"
+# ============================================
+# 核心配置（用户只需修改这里）
+# 支持通过环境变量覆盖默认值
+# ============================================
+ANSIBLE_ROOT="${ANSIBLE_ROOT:-/Users/bohaiqing/work/git/k8s_app_acelerator/gitlab_cfg}"
+VARS_FILE="${VARS_FILE:-${ANSIBLE_ROOT}/vars-test.yaml}"
+MAPPING_FILE="${MAPPING_FILE:-${ANSIBLE_ROOT}/mapping.yaml}"
+RESOURCES_FILE="${RESOURCES_FILE:-${ANSIBLE_ROOT}/resources.yaml}"
+BOOTSTRAP_FILE="${BOOTSTRAP_FILE:-${ANSIBLE_ROOT}/bootstrap-test.yml}"
 
-# 颜色定义
+# ============================================
+# 自动计算的变量（无需修改）
+# ============================================
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+
+# Go 项目根目录
+GO_ROOT="${PROJECT_ROOT}"
+
+# 输出目录（默认值）
+ANSIBLE_OUTPUT_DEFAULT="${ANSIBLE_ROOT}/output"
+GO_OUTPUT_DEFAULT="${GO_ROOT}/output"
+
+# 对比和报告目录
+COMPARISON_DIR="${PROJECT_ROOT}/comparison"
+REPORT_DIR="${PROJECT_ROOT}"
+
+# ============================================
+# 版本和颜色定义
+# ============================================
+VERSION="1.2.0"
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 CYAN='\033[0;36m'
 NC='\033[0m' # No Color
-
-# 配置变量
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
-TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
-
-# 默认路径配置 (可被参数覆盖)
-ANSIBLE_ROOT="/Users/bohaiqing/work/git/k8s_app_acelerator/gitlab_cfg"
-GO_ROOT="${PROJECT_ROOT}"
-
-# 输出目录 (默认值)
-ANSIBLE_OUTPUT_DEFAULT="${ANSIBLE_ROOT}/output"
-GO_OUTPUT_DEFAULT="${GO_ROOT}/output"
-
-COMPARISON_DIR="${PROJECT_ROOT}/comparison"
-REPORT_DIR="${PROJECT_ROOT}"
 
 # 统计变量
 TOTAL_FILES_ANSIBLE=0
@@ -55,30 +85,122 @@ MISSING_FILES=0
 # 自动生成 Go 输出（默认开启）
 AUTO_GENERATE_GO=true
 
-# 输出目录 - 必须在参数解析之后设置
-set_default_output_dirs() {
-    if [ -z "${ANSIBLE_OUTPUT}" ]; then
-        ANSIBLE_OUTPUT="${ANSIBLE_OUTPUT_DEFAULT}"
-    fi
-    
-    if [ -z "${GO_OUTPUT}" ]; then
-        GO_OUTPUT="${GO_OUTPUT_DEFAULT}"
-    fi
+# ============================================
+# 帮助信息
+# ============================================
+show_help() {
+    cat << EOF
+K8s App Accelerator - GitLab Cfg 对比工具 v${VERSION}
+
+用法:
+  \$0 [OPTIONS] [ANSIBLE_OUTPUT_DIR] [GO_OUTPUT_DIR]
+
+选项:
+  -h, --help                 显示此帮助信息
+  --no-auto-generate-go      Go 输出为空时不自动生成
+
+环境变量（可通过环境变量覆盖默认配置）:
+  ANSIBLE_ROOT               Ansible 项目根目录
+                             默认：/Users/bohaiqing/work/git/k8s_app_acelerator/gitlab_cfg
+  VARS_FILE                  配置文件路径
+                             默认：\${ANSIBLE_ROOT}/vars-test.yaml
+  MAPPING_FILE               Mapping 文件路径
+                             默认：\${ANSIBLE_ROOT}/mapping.yaml
+  RESOURCES_FILE             Resources 文件路径
+                             默认：\${ANSIBLE_ROOT}/resources.yaml
+  BOOTSTRAP_FILE             Bootstrap 文件路径
+                             默认：\${ANSIBLE_ROOT}/bootstrap-test.yml
+
+参数:
+  ANSIBLE_OUTPUT_DIR         Ansible 生成的输出目录路径
+  GO_OUTPUT_DIR              Go 生成的输出目录路径
+
+示例:
+  # 使用默认配置运行
+  \$0
+
+  # 禁用自动生成
+  \$0 --no-auto-generate-go
+
+  # 自定义 Ansible 根目录
+  ANSIBLE_ROOT=/path/to/gitlab_cfg \$0
+
+  # 自定义配置文件（如生产环境）
+  VARS_FILE=\${ANSIBLE_ROOT}/vars-prod.yaml \$0
+
+  # 完整自定义所有配置
+  ANSIBLE_ROOT=/path/to/gitlab_cfg \\
+    VARS_FILE=\${ANSIBLE_ROOT}/vars-prod.yaml \\
+    MAPPING_FILE=\${ANSIBLE_ROOT}/mapping-prod.yaml \\
+    \$0
+
+默认路径:
+  Ansible: \${ANSIBLE_OUTPUT_DEFAULT}
+  Go:      \${GO_OUTPUT_DEFAULT}
+
+输出文件:
+  - 对比数据：\${COMPARISON_DIR}/
+  - 详细报告：\${REPORT_DIR}/COMPARISON_REPORT_[时间戳].md
+EOF
 }
 
-# 默认输出目录设置函数
-set_default_output_dirs() {
-    if [ -z "${ANSIBLE_OUTPUT}" ]; then
-        ANSIBLE_OUTPUT="${ANSIBLE_OUTPUT_DEFAULT}"
-    fi
-    if [ -z "${GO_OUTPUT}" ]; then
-        GO_OUTPUT="${GO_OUTPUT_DEFAULT}"
-    fi
-}
+# 解析参数
+POSITIONAL_ARGS=()
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -h|--help)
+            show_help
+            exit 0
+            ;;
+        --no-auto-generate-go)
+            AUTO_GENERATE_GO=false
+            shift
+            ;;
+        --*)
+            echo "错误：未知参数：$1" >&2
+            show_help
+            exit 1
+            ;;
+        *)
+            POSITIONAL_ARGS+=("$1")
+            shift
+            ;;
+    esac
+done
 
-################################################################################
-# 工具函数
-################################################################################
+# 处理位置参数
+if [ ${#POSITIONAL_ARGS[@]} -eq 0 ]; then
+    # 没有提供参数，使用默认值
+    ANSIBLE_OUTPUT="${ANSIBLE_OUTPUT_DEFAULT}"
+    GO_OUTPUT="${GO_OUTPUT_DEFAULT}"
+elif [ ${#POSITIONAL_ARGS[@]} -eq 1 ]; then
+    ANSIBLE_OUTPUT="${POSITIONAL_ARGS[0]}"
+    GO_OUTPUT="${GO_OUTPUT_DEFAULT}"
+elif [ ${#POSITIONAL_ARGS[@]} -eq 2 ]; then
+    ANSIBLE_OUTPUT="${POSITIONAL_ARGS[0]}"
+    GO_OUTPUT="${POSITIONAL_ARGS[1]}"
+elif [ ${#POSITIONAL_ARGS[@]} -gt 2 ]; then
+    echo "错误：参数过多" >&2
+    show_help
+    exit 1
+fi
+
+# ============================================
+# 显示配置信息
+# ============================================
+echo "=================================================="
+echo "GitLab Cfg 配置生成对比脚本"
+echo "=================================================="
+echo ""
+echo "📋 配置信息:"
+echo "  ANSIBLE_ROOT:     ${ANSIBLE_ROOT}"
+echo "  VARS_FILE:        ${VARS_FILE}"
+echo "  MAPPING_FILE:     ${MAPPING_FILE}"
+echo "  RESOURCES_FILE:   ${RESOURCES_FILE}"
+echo "  BOOTSTRAP_FILE:   ${BOOTSTRAP_FILE}"
+echo "  Go 输出目录：      ${GO_OUTPUT}"
+echo "  Ansible 输出：     ${ANSIBLE_OUTPUT}"
+echo ""
 
 print_banner() {
     echo -e "${CYAN}"
@@ -159,19 +281,17 @@ auto_generate_go_output() {
     mkdir -p "${COMPARISON_DIR}"
     local gen_log="${COMPARISON_DIR}/go_generate_${TIMESTAMP}.log"
 
-    # Go 代码期望模板目录结构为：{templateDir}/{product}/templates/...
-    # 而 Ansible 实际结构为：roles/{app}/templates/...
-    local temp_templates_dir="${PROJECT_ROOT}/templates"
-    local created_temp_link=false
-    
-    if [ ! -e "${temp_templates_dir}" ]; then
-        mkdir -p "${temp_templates_dir}"
-        ln -s "${ANSIBLE_ROOT}/roles/cms-service" "${temp_templates_dir}/cms"
-        created_temp_link=true
-        print_info "已创建临时模板链接：${temp_templates_dir}/cms -> ${ANSIBLE_ROOT}/roles/cms-service"
+    # Go 代码直接使用 Ansible roles 目录中的模板
+    # 路径：{baseDir}/roles/{app}/templates/overlays/{profile}/{stack}/*.j2
+    # 无需创建符号链接或复制模板文件
+
+    # 先清理旧的 Go 输出（如果有）
+    if [ -d "${GO_OUTPUT_DEFAULT}" ]; then
+        print_info "清理旧的 Go 输出目录..."
+        rm -rf "${GO_OUTPUT_DEFAULT}"/*
     fi
 
-    local cmd="cd \"${PROJECT_ROOT}\" && go run main.go generate --base-dir \"${ANSIBLE_ROOT}\" --bootstrap bootstrap-test.yml --vars vars-test.yaml"
+    local cmd="cd \"${PROJECT_ROOT}\" && go run main.go gitlab-cfg generate --base-dir \"${ANSIBLE_ROOT}\" --config ${VARS_FILE} --mapping ${MAPPING_FILE} --resources ${RESOURCES_FILE} --skip-precheck"
 
     echo "执行命令:"
     echo "  ${cmd}"
@@ -180,27 +300,29 @@ auto_generate_go_output() {
     if bash -c "${cmd}" > "${gen_log}" 2>&1; then
         print_success "Go 生成命令执行成功"
         print_info "生成日志：${gen_log}"
+        
+        # 显示生成的组件统计
+        echo ""
+        print_info "生成的组件统计:"
+        local cms_count=$(find "${GO_OUTPUT_DEFAULT}/cms" -type f 2>/dev/null | wc -l | tr -d ' ')
+        local argo_count=$(find "${GO_OUTPUT_DEFAULT}/argo-app" -type f 2>/dev/null | wc -l | tr -d ' ')
+        local jenkins_count=$(find "${GO_OUTPUT_DEFAULT}/jenkins-job" -type f 2>/dev/null | wc -l | tr -d ' ')
+        
+        echo "  - CMS K8s 配置：${cms_count} 个文件"
+        echo "  - ArgoCD Application: ${argo_count} 个文件"
+        echo "  - Jenkins Job: ${jenkins_count} 个文件"
     else
         print_error "Go 生成命令执行失败"
         print_info "请查看日志：${gen_log}"
         echo ""
         print_info "你可以手动执行以下命令重试："
         echo "  cd \"${PROJECT_ROOT}\""
-        echo "  go run main.go generate --base-dir \"${ANSIBLE_ROOT}\" --bootstrap bootstrap-test.yml --vars vars-test.yaml"
+        echo "  go run main.go gitlab-cfg generate --base-dir \"${ANSIBLE_ROOT}\" --config ${VARS_FILE} --mapping ${MAPPING_FILE} --resources ${RESOURCES_FILE} --skip-precheck"
         echo ""
-        print_info "模板目录映射说明："
-        echo "  Go 期望：templates/{product}/templates/overlays/production/production/"
-        echo "  Ansible 实际：roles/{app}/templates/overlays/production/production/"
-        echo "  已创建：templates/cms -> roles/cms-service"
-        if [ "${created_temp_link}" = true ]; then
-            rm -rf "${temp_templates_dir}"
-        fi
+        print_info "模板目录说明："
+        echo "  Go 使用：{baseDir}/roles/{app}/templates/overlays/{profile}/{stack}/"
+        echo "  直接使用 Ansible roles 中的模板文件，无需复制或符号链接"
         exit 1
-    fi
-
-    if [ "${created_temp_link}" = true ]; then
-        rm -rf "${temp_templates_dir}"
-        print_info "已清理临时模板目录：${temp_templates_dir}"
     fi
 
     echo ""
@@ -234,7 +356,7 @@ check_prerequisites() {
         echo ""
         print_info "生成 Ansible 输出的命令:"
         echo "  cd ${ANSIBLE_ROOT}"
-        echo "  ansible-playbook bootstrap.yml -e '@vars.yaml'"
+        echo "  ansible-playbook ${BOOTSTRAP_FILE} -e '@${VARS_FILE}'"
         exit 1
     fi
     
@@ -393,22 +515,106 @@ compare_file_lists() {
     echo ""
 }
 
+# ============================================
+# 智能文件对比函数
+# 支持忽略：
+# 1. 末尾空行差异（1个或多个换行符）
+# 2. UUID/随机Hex值（如 dbupgrade-xxx-3e7bd6e）
+# ============================================
+smart_compare_files() {
+    local file1="$1"
+    local file2="$2"
+    
+    # 创建临时文件
+    local tmp1=$(mktemp)
+    local tmp2=$(mktemp)
+    
+    # 预处理文件1：去除末尾空行
+    sed -E ':a; /^\n*$/d; /\n$/!b; N; ba' "${file1}" > "${tmp1}" 2>/dev/null || cat "${file1}" > "${tmp1}"
+    
+    # 预处理文件2：去除末尾空行  
+    sed -E ':a; /^\n*$/d; /\n$/!b; N; ba' "${file2}" > "${tmp2}" 2>/dev/null || cat "${file2}" > "${tmp2}"
+    
+    # 去除末尾空行（更简单的方法）
+    sed -i '/^[[:space:]]*$/d' "${tmp1}" 2>/dev/null || true
+    sed -i '/^[[:space:]]*$/d' "${tmp2}" 2>/dev/null || true
+    
+    # 去除行尾空格
+    sed -i 's/[[:space:]]*$//' "${tmp1}" 2>/dev/null || true
+    sed -i 's/[[:space:]]*$//' "${tmp2}" 2>/dev/null || true
+    
+    # 标准化 UUID/Hex 随机值（用于 job.yaml 中的 name 字段）
+    # 匹配模式：dbupgrade-xxx-随机7位hex
+    # 例如：dbupgrade-cms-service-3e7bd6e -> dbupgrade-cms-service-XXXXXXX
+    local ntmp1=$(mktemp)
+    local ntmp2=$(mktemp)
+    
+    # 标准化 file1 中的随机值
+    sed -E 's/(dbupgrade-[a-zA-Z0-9-]+-)[0-9a-f]{7}/\1XXXXXXX/g' "${tmp1}" > "${ntmp1}"
+    
+    # 标准化 file2 中的随机值
+    sed -E 's/(dbupgrade-[a-zA-Z0-9-]+-)[0-9a-f]{7}/\1XXXXXXX/g' "${tmp2}" > "${ntmp2}"
+    
+    # 对比预处理后的文件
+    local result=0
+    cmp -s "${ntmp1}" "${ntmp2}" || result=$?
+    
+    # 清理临时文件
+    rm -f "${tmp1}" "${tmp2}" "${ntmp1}" "${ntmp2}"
+    
+    return ${result}
+}
+
+# 获取智能对比的详细差异
+smart_diff_files() {
+    local file1="$1"
+    local file2="$2"
+    
+    # 创建临时文件
+    local tmp1=$(mktemp)
+    local tmp2=$(mktemp)
+    
+    # 预处理：去除末尾空行和行尾空格
+    sed '/^[[:space:]]*$/d' "${file1}" | sed 's/[[:space:]]*$//' > "${tmp1}"
+    sed '/^[[:space:]]*$/d' "${file2}" | sed 's/[[:space:]]*$//' > "${tmp2}"
+    
+    # 标准化随机值
+    local ntmp1=$(mktemp)
+    local ntmp2=$(mktemp)
+    sed -E 's/(dbupgrade-[a-zA-Z0-9-]+-)[0-9a-f]{7}/\1XXXXXXX/g' "${tmp1}" > "${ntmp1}"
+    sed -E 's/(dbupgrade-[a-zA-Z0-9-]+-)[0-9a-f]{7}/\1XXXXXXX/g' "${tmp2}" > "${ntmp2}"
+    
+    # 输出差异
+    diff -u "${ntmp1}" "${ntmp2}"
+    
+    # 清理
+    rm -f "${tmp1}" "${tmp2}" "${ntmp1}" "${ntmp2}"
+}
+
+# ============================================
+# 内容对比函数
+# ============================================
 compare_file_contents() {
-    print_section "对比文件内容"
+    print_section "对比文件内容 (智能模式)"
+    print_info "忽略规则: 末尾空行差异、UUID/随机Hex值差异"
+    echo ""
     
     local identical_file="${COMPARISON_DIR}/identical_files_${TIMESTAMP}.txt"
     local different_file="${COMPARISON_DIR}/different_files_${TIMESTAMP}.txt"
     local missing_file="${COMPARISON_DIR}/missing_files_${TIMESTAMP}.txt"
     local diff_detail="${COMPARISON_DIR}/content_diff_${TIMESTAMP}.txt"
+    local tolerated_file="${COMPARISON_DIR}/tolerated_differences_${TIMESTAMP}.txt"
     
     > "${identical_file}"
     > "${different_file}"
     > "${missing_file}"
     > "${diff_detail}"
+    > "${tolerated_file}"
     
     local identical_count=0
     local different_count=0
     local missing_count=0
+    local tolerated_count=0
     
     echo -e "${CYAN}开始逐文件对比...${NC}"
     echo ""
@@ -425,18 +631,29 @@ compare_file_contents() {
         else
             # 临时禁用 set -e 以防止 cmp -s 在文件不同时退出
             set +e
-            if cmp -s "${ansible_f}" "${go_f}"; then
+            if smart_compare_files "${ansible_f}" "${go_f}"; then
                 echo -e "${GREEN}相同${NC}  ${rel_path}"
                 echo "${rel_path}" >> "${identical_file}"
                 identical_count=$((identical_count + 1))
             else
-                echo -e "${YELLOW}差异${NC}  ${rel_path}"
-                echo "${rel_path}" >> "${different_file}"
-                different_count=$((different_count + 1))
+                # 文件有差异，检查是否是可容忍的差异
+                local diff_output
+                diff_output=$(smart_diff_files "${ansible_f}" "${go_f}" 2>&1)
                 
-                echo "========== ${rel_path} ==========" >> "${diff_detail}"
-                diff -u "${ansible_f}" "${go_f}" >> "${diff_detail}" 2>&1
-                echo "" >> "${diff_detail}"
+                if [ -z "${diff_output}" ]; then
+                    # 差异仅在末尾空行或随机值，可容忍
+                    echo -e "${GREEN}容错${NC}  ${rel_path} (仅末尾空行/随机值差异)"
+                    echo "${rel_path}" >> "${tolerated_file}"
+                    tolerated_count=$((tolerated_count + 1))
+                else
+                    echo -e "${YELLOW}差异${NC}  ${rel_path}"
+                    echo "${rel_path}" >> "${different_file}"
+                    different_count=$((different_count + 1))
+                    
+                    echo "========== ${rel_path} ==========" >> "${diff_detail}"
+                    echo "${diff_output}" >> "${diff_detail}"
+                    echo "" >> "${diff_detail}"
+                fi
             fi
             # 恢复 set -e
             set -e
@@ -466,12 +683,14 @@ compare_file_contents() {
     echo -e "${CYAN}内容对比统计:${NC}"
     echo "─────────────────────────────────────────"
     print_success "完全一致的文件: ${IDENTICAL_FILES}"
+    print_success "容错一致的文件: ${tolerated_count} (仅末尾空行/随机值差异)"
     print_warning "内容有差异的文件: ${DIFFERENT_FILES}"
     print_error "缺失的文件: ${MISSING_FILES}"
     
     echo ""
     print_info "详细对比结果已保存:"
     echo "  - 相同文件列表: ${identical_file}"
+    echo "  - 容错一致文件列表: ${tolerated_file}"
     echo "  - 差异文件列表: ${different_file}"
     echo "  - 缺失文件列表: ${missing_file}"
     echo "  - 详细差异内容: ${diff_detail}"
@@ -540,7 +759,7 @@ check_missing_components() {
         print_error "Go 实现缺少 ArgoCD Application 配置生成"
         print_info "Ansible 生成了 ${argo_ansible} 个 ArgoCD 配置文件"
     elif [ "${argo_go}" -gt 0 ]; then
-        print_success "ArgoCD 配置已生成: ${argo_go} 个文件"
+        print_success "ArgoCD 配置已生成：${argo_go} 个文件"
     else
         print_info "未检测到 ArgoCD 配置（可能不需要）"
     fi
@@ -556,9 +775,41 @@ check_missing_components() {
         print_error "Go 实现缺少 Jenkins Job 配置生成"
         print_info "Ansible 生成了 ${jenkins_ansible} 个 Jenkins 配置文件"
     elif [ "${jenkins_go}" -gt 0 ]; then
-        print_success "Jenkins 配置已生成: ${jenkins_go} 个文件"
+        print_success "Jenkins 配置已生成：${jenkins_go} 个文件"
     else
         print_info "未检测到 Jenkins 配置（可能不需要）"
+    fi
+    
+    # 检查 CMS 配置（核心 K8s 资源）
+    echo ""
+    echo -e "${CYAN}3. CMS K8s 资源配置:${NC}"
+    echo "─────────────────────────────────────────"
+    local cms_ansible=$(find "${ANSIBLE_OUTPUT}" -path "*/cms/cms-service/*" -type f 2>/dev/null | wc -l | tr -d ' ')
+    local cms_go=$(find "${GO_OUTPUT}" -path "*/cms/cms-service/*" -type f 2>/dev/null | wc -l | tr -d ' ')
+    
+    if [ "${cms_go}" -eq 0 ] && [ "${cms_ansible}" -gt 0 ]; then
+        print_error "Go 实现缺少 CMS K8s 资源配置生成"
+        print_info "Ansible 生成了 ${cms_ansible} 个 CMS 配置文件"
+    elif [ "${cms_go}" -gt 0 ]; then
+        print_success "CMS 配置已生成：${cms_go} 个文件"
+        
+        # 检查关键文件是否都存在
+        local expected_files=("deployment.yaml" "service.yaml" "config.yaml" "hpa.yaml" "job.yaml" "kustomization.yaml")
+        local missing_files=()
+        
+        for file in "${expected_files[@]}"; do
+            if ! find "${GO_OUTPUT}" -path "*/cms/cms-service/*" -name "${file}" | grep -q .; then
+                missing_files+=("${file}")
+            fi
+        done
+        
+        if [ ${#missing_files[@]} -gt 0 ]; then
+            print_warning "缺少以下关键文件：${missing_files[*]}"
+        else
+            print_success "所有关键配置文件都已生成"
+        fi
+    else
+        print_info "未检测到 CMS 配置（可能不需要）"
     fi
     
     echo ""

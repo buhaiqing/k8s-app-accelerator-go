@@ -5,7 +5,8 @@
 ### 项目背景
 将现有的 Ansible-based K8s 配置生成器迁移到 Golang实现，保持 100% Jinja2 模板兼容性，同时获得 Go语言的性能、类型安全和工程化优势。
 
-**当前阶段**: 已完成 ArgoCD、Jenkins、CMDB 模块的迁移  
+**当前阶段**: 已完成 ArgoCD、Jenkins、CMDB 模块的迁移，GitLab Cfg 基础框架已搭建  
+**进行中**: GitLab Cfg 生成器实现（CLI 已完成，Generator 待完善）  
 **长期目标**: 逐步迁移整个 `k8s_app_acelerator` 下的所有功能模块
 
 ### 核心目标

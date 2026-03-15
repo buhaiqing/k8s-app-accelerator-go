@@ -143,7 +143,9 @@ on_k8s=True`, data.DNETProject, data.DNETProduct, data.GitBaseURL, data.GitBaseG
 	}
 
 	// 使用 Python Worker 渲染模板
-	templatePath := filepath.Join(g.templateDir, "job.j2")
+	// 模板路径：{templateDir}/jobs/templates/job.j2
+	// 其中 templateDir 指向 Ansible roles 目录
+	templatePath := filepath.Join(g.templateDir, "jobs", "templates", "job.j2")
 
 	// 转换为绝对路径
 	absTemplatePath, err := filepath.Abs(templatePath)

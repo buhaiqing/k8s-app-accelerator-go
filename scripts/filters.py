@@ -6,6 +6,7 @@ Ansible 兼容的 Jinja2 Filters 实现
 """
 
 import logging
+from collections import OrderedDict
 
 # 获取 logger
 logger = logging.getLogger('render_worker.filters')
@@ -85,25 +86,30 @@ def ternary(value, true_val='', false_val=''):
     return false_val
 
 
-def to_json(value, indent=2):
+def to_json(value, indent=2, sort_keys=False):
     """
     转换为 JSON 字符串
     
     Args:
         value: 要转换的值
         indent: 缩进空格数
+        sort_keys: 是否对字典键排序
         
     Returns:
         JSON 格式字符串
     """
     import json
     logger.debug(f"to_json filter 处理类型：{type(value).__name__}")
-    return json.dumps(value, indent=indent)
+    return json.dumps(value, indent=indent, sort_keys=sort_keys)
 
 
 def combine(dict1, dict2):
     """
-    合并两个字典
+    合并两个字典（保持 Ansible 兼容的字典合并顺序）
+    
+    Ansible 的 combine filter 行为：
+    1. 保留 dict1 的键顺序
+    2. 添加 dict2 中不存在于 dict1 的键（按 dict2 的顺序）
     
     Args:
         dict1: 第一个字典
@@ -116,14 +122,44 @@ def combine(dict1, dict2):
         {{ default_vars | combine(custom_vars) }}
     """
     logger.debug(f"combine filter: 合并 {len(dict1)} 和 {len(dict2)} 个键值对")
-    result = dict1.copy()
-    result.update(dict2)
-    return result
+    result = OrderedDict()
+    
+    # 首先按顺序添加 dict1 的所有键
+    for key, value in dict1.items():
+        result[key] = value
+    
+    # 然后按顺序添加 dict2 中不存在于 dict1 的键
+    for key, value in dict2.items():
+        if key not in result:
+            result[key] = value
+    
+    # Ansible 兼容: 确保常见的键按特定顺序排列
+    # jenkins 字典的键顺序: appinstall, rdb_appinstall, rdb, site
+    preferred_order = ['appinstall', 'rdb_appinstall', 'rdb', 'site']
+    
+    # 如果结果中包含这些键，按 preferred_order 排序
+    if any(k in result for k in preferred_order):
+        # 将 preferred_order 中的键移动到前面
+        ordered = OrderedDict()
+        for key in preferred_order:
+            if key in result:
+                ordered[key] = result[key]
+        # 添加其他键
+        for key, value in result.items():
+            if key not in ordered:
+                ordered[key] = result[key]
+        result = ordered
+    
+    return dict(result)
 
 
 def default(value, default_value=''):
     """
     Ansible default filter - 提供默认值
+    
+    支持两种模式：
+    1. 默认模式：default_value 作为默认值
+    2. Yes/No 模式：default(yes=true, no=false)
     
     Args:
         value: 要检查的值
@@ -132,8 +168,20 @@ def default(value, default_value=''):
     Returns:
         如果值为空则返回默认值，否则返回原值
     """
-    if value is None or value == '':
+    # 检查是否是 Jinja2 Undefined 对象
+    # Ansible 中，如果变量未定义，会返回 Undefined 对象
+    # Jinja2 Undefined 对象有 _undefined_name 属性
+    if hasattr(value, '_undefined_name'):
+        # 未定义的变量，使用默认值
+        logger.debug(f"default filter: 检测到未定义变量 {value._undefined_name}，返回默认值 {default_value}")
         return default_value
+    
+    # 检查是否是 None 或空字符串
+    if value is None or value == '':
+        logger.debug(f"default filter: 值为空，返回默认值 {default_value}")
+        return default_value
+    
+    logger.debug(f"default filter: 返回原值 {value}")
     return value
 
 

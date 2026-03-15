@@ -563,7 +563,7 @@ set +x
 ```bash
 # 清理所有测试输出
 rm -rf ./output/cmdb-go ./output/ansible-cmdb
-rm -rf ./output/go-jenkins ./output/ansible-jenkins
+rm -rf ./output/jenkins-job ./output/ansible-jenkins
 rm -rf /tmp/cmdb-comparison
 ```
 
@@ -768,7 +768,7 @@ go test -v ./internal/config/...
 
 4. **对比 Ansible 输出**
    ```bash
-   bash scripts/compare_outputs.sh
+   bash scripts/compare_gitlab_cfg_outputs.sh
    ```
 
 5. **修复发现的差异并编写测试**

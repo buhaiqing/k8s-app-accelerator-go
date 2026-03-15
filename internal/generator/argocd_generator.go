@@ -90,7 +90,10 @@ func (g *ArgoCDGenerator) GenerateForApp(appName string) error {
 	}
 
 	// 写入文件
-	outputPath := filepath.Join(g.outputDir, "argo-app", g.projectConfig.Project, "int", "k8s_"+stackID, appName+".yaml")
+	// 文件名格式：{project}-{app}.yaml（与 Ansible 保持一致）
+	// 示例：cms-cms-service.yaml
+	outputFileName := fmt.Sprintf("%s-%s.yaml", g.projectConfig.Project, appName)
+	outputPath := filepath.Join(g.outputDir, "argo-app", g.projectConfig.Project, "int", "k8s_"+stackID, outputFileName)
 	if err := os.MkdirAll(filepath.Dir(outputPath), 0755); err != nil {
 		return fmt.Errorf("创建目录失败：%w", err)
 	}

@@ -221,8 +221,8 @@ python3 -c "from scripts.filters import *; print(ternary(True, 'yes', 'no'))"
 # 对比 Ansible 和 Go 输出
 diff -r output/go output/ansible
 
-# 使用对比脚本
-bash scripts/compare_argocd_outputs.sh
+# 使用对比脚本（统一对比工具）
+bash scripts/compare_outputs.sh
 ```
 
 ---
