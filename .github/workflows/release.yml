@@ -1,0 +1,119 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (e.g., v1.0.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          # Linux builds
+          - goos: linux
+            goarch: amd64
+            suffix: linux-amd64
+          - goos: linux
+            goarch: arm64
+            suffix: linux-arm64
+          # macOS builds
+          - goos: darwin
+            goarch: amd64
+            suffix: darwin-amd64
+          - goos: darwin
+            goarch: arm64
+            suffix: darwin-arm64
+          # Windows builds
+          - goos: windows
+            goarch: amd64
+            suffix: windows-amd64
+            ext: .exe
+          - goos: windows
+            goarch: arm64
+            suffix: windows-arm64
+            ext: .exe
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.0'
+
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Build binary
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: 0
+        run: |
+          output_name="k8s-gen-${{ matrix.suffix }}${{ matrix.ext }}"
+          ldflags="-s -w -X github.com/buhaiqing/k8s-app-accelerator-go/internal/version.Version=${{ github.ref_name }} -X github.com/buhaiqing/k8s-app-accelerator-go/internal/version.Commit=${{ github.sha }} -X github.com/buhaiqing/k8s-app-accelerator-go/internal/version.Date=$(date -u +%Y-%m-%d)"
+          go build -trimpath -ldflags "$ldflags" -o "dist/${output_name}" .
+          echo "Built: dist/${output_name}"
+
+      - name: Calculate checksum
+        run: |
+          cd dist
+          sha256sum k8s-gen-* > checksums.txt
+          cat checksums.txt
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: binaries-${{ matrix.suffix }}
+          path: dist/k8s-gen-*
+          retention-days: 1
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          pattern: binaries-*
+          merge-multiple: true
+
+      - name: List downloaded artifacts
+        run: ls -la dist/
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.tag || github.ref_name }}
+          name: Release ${{ github.event.inputs.tag || github.ref_name }}
+          draft: false
+          prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.event.inputs.tag, 'alpha') || contains(github.event.inputs.tag, 'beta') }}
+          files: |
+            dist/k8s-gen-*
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
