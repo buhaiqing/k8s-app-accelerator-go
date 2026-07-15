@@ -159,7 +159,7 @@ func (g *Generator) generateForProfile(appName, product, profile string, roleVar
 		appName, product, profile, stackId)
 
 	// 创建目录
-	if err := os.MkdirAll(outputPath, 0755); err != nil {
+	if err := os.MkdirAll(outputPath, 0750); err != nil {
 		return fmt.Errorf("创建目录失败：%w", err)
 	}
 
@@ -504,6 +504,9 @@ func (g *Generator) getTemplateFiles(product, profile string, roleVars *model.Ro
 func (g *Generator) renderTemplate(templatePath, outputPath string, context map[string]interface{}) error {
 	// 从 Worker 池获取 worker
 	worker := g.workerPool.GetWorker()
+	if worker == nil {
+		return fmt.Errorf("没有可用的 Worker")
+	}
 
 	// 调用 Worker 渲染
 	req := template.RenderRequest{
@@ -530,7 +533,7 @@ func (g *Generator) renderTemplate(templatePath, outputPath string, context map[
 	if len(content) > 0 && content[len(content)-1] != '\n' {
 		content += "\n"
 	}
-	if err := os.WriteFile(outputFile, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(outputFile, []byte(content), 0600); err != nil {
 		return fmt.Errorf("写入文件失败：%w", err)
 	}
 

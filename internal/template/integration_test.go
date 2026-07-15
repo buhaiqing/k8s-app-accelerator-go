@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/buhaiqing/k8s-app-accelerator-go/internal/template"
+	"github.com/stretchr/testify/assert"
 )
 
 // TestWorkerPool_Integration 集成测试

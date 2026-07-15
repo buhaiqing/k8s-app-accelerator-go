@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/buhaiqing/k8s-app-accelerator-go/internal/config"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestLoadProjectConfig(t *testing.T) {

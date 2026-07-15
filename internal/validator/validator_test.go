@@ -3,10 +3,10 @@ package validator_test
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/buhaiqing/k8s-app-accelerator-go/internal/config"
 	"github.com/buhaiqing/k8s-app-accelerator-go/internal/model"
 	"github.com/buhaiqing/k8s-app-accelerator-go/internal/validator"
+	"github.com/stretchr/testify/assert"
 )
 
 // TestValidateProjectConfig_Basic 测试基本配置检查

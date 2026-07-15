@@ -154,12 +154,12 @@ func (g *CMDBGenerator) generateForProfile(profile string, resourceVars map[stri
 	finalSQL := strings.Join(allSQLParts, "\n\n")
 
 	// 写入 SQL 文件
-	if err := os.MkdirAll(g.outputDir, 0755); err != nil {
+	if err := os.MkdirAll(g.outputDir, 0750); err != nil {
 		return fmt.Errorf("创建输出目录失败：%w", err)
 	}
 	// 使用 Ansible 兼容的文件名：{profile}.sql 而不是 sql_{profile}.sql
 	outputFile := filepath.Join(g.outputDir, fmt.Sprintf("%s.sql", profile))
-	if err := os.WriteFile(outputFile, []byte(finalSQL), 0644); err != nil {
+	if err := os.WriteFile(outputFile, []byte(finalSQL), 0600); err != nil {
 		return fmt.Errorf("写入 SQL 文件失败：%w", err)
 	}
 
@@ -265,7 +265,7 @@ func copyFile(src, dst string) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(dst, data, 0644)
+	return os.WriteFile(dst, data, 0600)
 }
 
 // generateRandomString 生成随机字符串

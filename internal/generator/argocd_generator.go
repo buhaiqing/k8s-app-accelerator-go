@@ -94,11 +94,11 @@ func (g *ArgoCDGenerator) GenerateForApp(appName string) error {
 	// 示例：cms-cms-service.yaml
 	outputFileName := fmt.Sprintf("%s-%s.yaml", g.projectConfig.Project, appName)
 	outputPath := filepath.Join(g.outputDir, "argo-app", g.projectConfig.Project, "int", "k8s_"+stackID, outputFileName)
-	if err := os.MkdirAll(filepath.Dir(outputPath), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(outputPath), 0750); err != nil {
 		return fmt.Errorf("创建目录失败：%w", err)
 	}
 
-	if err := os.WriteFile(outputPath, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(outputPath, []byte(content), 0600); err != nil {
 		return fmt.Errorf("写入文件失败：%w", err)
 	}
 

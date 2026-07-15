@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/buhaiqing/k8s-app-accelerator-go/internal/template"
+	"github.com/stretchr/testify/assert"
 )
 
 // TestRenderWorker_SingleRender 测试单次渲染

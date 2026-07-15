@@ -332,7 +332,7 @@ func (g *GitlabCfgGenerator) generateForProject(data GitlabCfgData) error {
 	// 创建输出目录：{outputDir}/{DNET_PRODUCT}/{app}/overlays/{profile}/{cmdb_stack}
 	// 对应 Ansible: {outputDir}/{DNET_PRODUCT}/{app}/overlays/{profile}/{cmdb_stack}
 	outputSubDir := filepath.Join(g.outputDir, data.DNETProduct, data.AppName, "overlays", data.Profile, data.CmdbStack)
-	if err := os.MkdirAll(outputSubDir, 0755); err != nil {
+	if err := os.MkdirAll(outputSubDir, 0750); err != nil {
 		return fmt.Errorf("创建输出目录失败：%w", err)
 	}
 
@@ -436,8 +436,12 @@ func (g *GitlabCfgGenerator) generateConfigFile(data GitlabCfgData, outputDir st
 
 	// 确定 harbor_project 值
 	harborProject := ""
-	if hp, ok := g.resources["harbor_project"].(string); ok && hp != "" {
-		harborProject = hp
+	if g.resources != nil {
+		if hp, ok := g.resources["harbor_project"].(string); ok && hp != "" {
+			harborProject = hp
+		} else {
+			harborProject = data.DNETProduct
+		}
 	} else {
 		harborProject = data.DNETProduct
 	}
@@ -568,7 +572,7 @@ func (g *GitlabCfgGenerator) writeFileWithNewline(path string, content string) e
 	if len(content) > 0 && !strings.HasSuffix(content, "\n") {
 		content += "\n"
 	}
-	return os.WriteFile(path, []byte(content), 0644)
+	return os.WriteFile(path, []byte(content), 0600)
 }
 
 // generateArgoCDConfig 生成 ArgoCD Application 配置
@@ -579,7 +583,7 @@ func (g *GitlabCfgGenerator) generateArgoCDConfig(data GitlabCfgData) error {
 	// 对应 Ansible: {outputDir}/argo-app/{project}/{profile}/k8s_{DNET_PRODUCT}
 	k8sProduct := "k8s_" + data.DNETProduct
 	outputSubDir := filepath.Join(g.outputDir, "argo-app", data.Project, data.Profile, k8sProduct)
-	if err := os.MkdirAll(outputSubDir, 0755); err != nil {
+	if err := os.MkdirAll(outputSubDir, 0750); err != nil {
 		return fmt.Errorf("创建 ArgoCD 输出目录失败：%w", err)
 	}
 
@@ -600,8 +604,12 @@ func (g *GitlabCfgGenerator) generateArgoCDConfig(data GitlabCfgData) error {
 
 	// 确定 harbor_project 值
 	harborProject := ""
-	if hp, ok := g.resources["harbor_project"].(string); ok && hp != "" {
-		harborProject = hp
+	if g.resources != nil {
+		if hp, ok := g.resources["harbor_project"].(string); ok && hp != "" {
+			harborProject = hp
+		} else {
+			harborProject = data.DNETProduct
+		}
 	} else {
 		harborProject = data.DNETProduct
 	}
@@ -681,15 +689,19 @@ func (g *GitlabCfgGenerator) generateJenkinsConfig(data GitlabCfgData) error {
 	// 对应 Ansible: {outputDir}/jenkins-job/{harbor_project}
 	// 需要从 resources 中获取 harbor_project 值
 	harborProject := ""
-	if hp, ok := g.resources["harbor_project"].(string); ok {
-		harborProject = hp
+	if g.resources != nil {
+		if hp, ok := g.resources["harbor_project"].(string); ok && hp != "" {
+			harborProject = hp
+		} else {
+			// 如果没有设置，使用 DNET_PRODUCT 作为默认值
+			harborProject = data.DNETProduct
+		}
 	} else {
-		// 如果没有设置，使用 DNET_PRODUCT 作为默认值
 		harborProject = data.DNETProduct
 	}
 
 	outputSubDir := filepath.Join(g.outputDir, "jenkins-job", harborProject)
-	if err := os.MkdirAll(outputSubDir, 0755); err != nil {
+	if err := os.MkdirAll(outputSubDir, 0750); err != nil {
 		return fmt.Errorf("创建 Jenkins 输出目录失败：%w", err)
 	}
 

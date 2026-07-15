@@ -3,10 +3,10 @@ package generator_test
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/buhaiqing/k8s-app-accelerator-go/internal/config"
 	"github.com/buhaiqing/k8s-app-accelerator-go/internal/generator"
 	"github.com/buhaiqing/k8s-app-accelerator-go/internal/model"
+	"github.com/stretchr/testify/assert"
 )
 
 // TestNewGenerator_Basic 测试基本创建（跳过实际 Worker 启动）

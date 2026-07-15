@@ -165,11 +165,11 @@ on_k8s=True`, data.DNETProject, data.DNETProduct, data.GitBaseURL, data.GitBaseG
 
 	// 写入文件：{outputDir}/{DNET_PRODUCT}/project.yml
 	outputPath := filepath.Join(g.outputDir, data.DNETProduct, "project.yml")
-	if err := os.MkdirAll(filepath.Dir(outputPath), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(outputPath), 0750); err != nil {
 		return fmt.Errorf("创建目录失败：%w", err)
 	}
 
-	if err := os.WriteFile(outputPath, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(outputPath, []byte(content), 0600); err != nil {
 		return fmt.Errorf("写入文件失败：%w", err)
 	}
 

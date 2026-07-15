@@ -67,9 +67,11 @@ class RenderWorker:
 
         self.logger.info("初始化 Jinja2 环境")
 
-        # 初始化 Jinja2 环境
-        # 使用根目录加载器，支持绝对路径模板
-        self.env = Environment(loader=FileSystemLoader("/"), undefined=AnsibleUndefined)
+        # ponytail: restrict template loading to configured base directory
+        # Security: FileSystemLoader("/") allows reading any file - restrict to template_dir
+        template_base = os.getenv("TEMPLATE_BASE_DIR", "/")
+        self.env = Environment(loader=FileSystemLoader(template_base), undefined=AnsibleUndefined)
+        self.template_base = template_base
 
         # 加载自定义 filters
         filters = load_filters()
