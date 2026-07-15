@@ -18,6 +18,10 @@ type WorkerPool struct {
 }
 
 func NewWorkerPool(count int, scriptPath string) (*WorkerPool, error) {
+	if err := PythonDepsCheck(); err != nil {
+		return nil, err
+	}
+
 	if count <= 0 {
 		count = 5
 	}
