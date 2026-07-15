@@ -76,11 +76,20 @@ jobs:
           echo "Built: dist/${output_name}"
 
       - name: Package tar.gz
+        shell: bash
         run: |
           cd dist
           tar -czf "k8s-gen-${{ matrix.suffix }}.tar.gz" "k8s-gen-${{ matrix.suffix }}${{ matrix.ext }}"
           tar -czf "k8s-gen-${{ matrix.suffix }}-full.tar.gz" "k8s-gen-${{ matrix.suffix }}${{ matrix.ext }}" scripts/
-          sha256sum k8s-gen-${{ matrix.suffix }}*.tar.gz | tee checksums.txt
+          if command -v sha256sum >/dev/null 2>&1; then
+            sha256sum k8s-gen-${{ matrix.suffix }}*.tar.gz | tee checksums.txt
+          else
+            # Windows fallback using certutil
+            for f in k8s-gen-${{ matrix.suffix }}*.tar.gz; do
+              hash=$(certutil -hashfile "$f" SHA256 | grep -v 'hash of file' | grep -v 'CertUtil' | tr -d ' \r\n')
+              echo "$hash  $f" | tee -a checksums.txt
+            done
+          fi
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
