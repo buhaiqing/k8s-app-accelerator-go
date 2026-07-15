@@ -48,6 +48,27 @@ $Version = "1.0.0"; irm https://raw.githubusercontent.com/buhaiqing/k8s-app-acce
 k8s-gen --help
 ```
 
+### 🐍 Python 运行时依赖
+
+k8s-gen 的模板渲染功能依赖 **Python 3** 和以下包：
+
+| 包 | 版本 | 用途 |
+|-----|------|------|
+| Jinja2 | ≥3.0 | 模板引擎 |
+| PyYAML | ≥5.4 | YAML 处理 |
+
+**安装方式：**
+
+```bash
+# 方式一：使用项目自带的 requirements.txt（推荐）
+pip3 install -r scripts/requirements.txt
+
+# 方式二：直接安装
+pip3 install jinja2 pyyaml
+```
+
+**安装脚本不包含 Python 依赖**，需要用户手动安装。
+
 ### 从源码构建
 
 ```bash
@@ -524,9 +545,16 @@ GitHub Actions 自动执行以下流程：
 
 | Workflow | 触发条件 | 作用 |
 |----------|---------|------|
-| `test.yml` | push main / PR | Go build/vet/test + Python filters 测试 |
+| `test.yml` | push main / PR | Go build/vet/test + Python 3.11 + jinja2/pyyaml |
 | `validate.yml` | push main / PR | CLI 各子命令帮助校验 |
 | `release.yml` | tag `v*` / manual dispatch | 跨平台编译 + GitHub Release |
+
+### Release 包说明
+
+| 包类型 | 包含内容 | 适用场景 |
+|--------|----------|----------|
+| `k8s-gen-<os>-<arch>.tar.gz` | 仅 Go 二进制 | 已有 Python 环境 |
+| `k8s-gen-<os>-<arch>-full.tar.gz` | 二进制 + `scripts/` | 需要包含 Python 脚本 |
 
 ### 发布新版本
 
