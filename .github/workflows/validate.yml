@@ -1,0 +1,37 @@
+name: Validate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+
+      - name: Build
+        run: go build -ldflags "-X main.Version=$(git describe --tags --always --dirty 2>/dev/null || echo '0.0.0-dev')" -o k8s-gen .
+
+      - name: Check CLI help
+        run: ./k8s-gen --help
+
+      - name: Check precheck command
+        run: ./k8s-gen precheck --help
+
+      - name: Check generate command
+        run: ./k8s-gen generate --help
+
+      - name: Check list command
+        run: ./k8s-gen list --help
+
+      - name: Check config command
+        run: ./k8s-gen config --help

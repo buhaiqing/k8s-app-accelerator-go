@@ -75,17 +75,18 @@ jobs:
           go build -trimpath -ldflags "$ldflags" -o "dist/${output_name}" .
           echo "Built: dist/${output_name}"
 
-      - name: Calculate checksum
+      - name: Package tar.gz
         run: |
           cd dist
-          sha256sum k8s-gen-* > checksums.txt
-          cat checksums.txt
+          tar -czf "k8s-gen-${{ matrix.suffix }}.tar.gz" "k8s-gen-${{ matrix.suffix }}${{ matrix.ext }}"
+          tar -czf "k8s-gen-${{ matrix.suffix }}-full.tar.gz" "k8s-gen-${{ matrix.suffix }}${{ matrix.ext }}" scripts/
+          sha256sum k8s-gen-${{ matrix.suffix }}*.tar.gz | tee checksums.txt
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: binaries-${{ matrix.suffix }}
-          path: dist/k8s-gen-*
+          path: dist/k8s-gen-${{ matrix.suffix }}*.tar.gz
           retention-days: 1
 
   release:

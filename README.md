@@ -2,6 +2,66 @@
 
 基于 Ansible roles 模板生成 Kubernetes 应用配置的 Golang实现。
 
+[![Test](https://github.com/buhaiqing/k8s-app-accelerator-go/actions/workflows/test.yml/badge.svg)](https://github.com/buhaiqing/k8s-app-accelerator-go/actions/workflows/test.yml)
+[![Validate](https://github.com/buhaiqing/k8s-app-accelerator-go/actions/workflows/validate.yml/badge.svg)](https://github.com/buhaiqing/k8s-app-accelerator-go/actions/workflows/validate.yml)
+[![Build and Release](https://github.com/buhaiqing/k8s-app-accelerator-go/actions/workflows/release.yml/badge.svg)](https://github.com/buhaiqing/k8s-app-accelerator-go/actions/workflows/release.yml)
+
+## 🚀 一键安装
+
+不需要关心你用的是 macOS / Linux 还是 Windows，复制下面对应的一行命令即可，脚本会自动识别系统架构、下载匹配的包并完成安装：
+
+| 平台 | 一键安装命令 |
+|------|-------------|
+| **macOS / Linux** | `curl -fsSL https://raw.githubusercontent.com/buhaiqing/k8s-app-accelerator-go/main/cmd/k8s-gen/install.sh \| bash` |
+| **Windows (PowerShell)** | `irm https://raw.githubusercontent.com/buhaiqing/k8s-app-accelerator-go/main/cmd/k8s-gen/install.ps1 \| iex` |
+
+- 自动匹配当前 OS / 架构（linux/darwin × amd64/arm64），默认装到**用户可写目录**，**无需 sudo / 管理员提权**。
+- macOS/Linux 默认装到 `~/.local/bin`，Windows 默认装到 `%LOCALAPPDATA%\Programs\k8s-gen` 并自动加入用户 PATH。
+
+> 自定义安装路径：`INSTALL_DIR=/opt/bin curl ... \| bash`（或 PowerShell 传 `-InstallDir`）。
+
+### 更新到新版本
+
+安装器是**幂等**的，且**已是最新版时会自动跳过下载**——任何时候重跑同一条安装命令即可升级：
+
+```bash
+# macOS / Linux：重跑即升级
+curl -fsSL https://raw.githubusercontent.com/buhaiqing/k8s-app-accelerator-go/main/cmd/k8s-gen/install.sh | bash
+
+# Windows：重跑即升级
+irm https://raw.githubusercontent.com/buhaiqing/k8s-app-accelerator-go/main/cmd/k8s-gen/install.ps1 | iex
+```
+
+### 安装指定版本
+
+```bash
+# macOS / Linux
+VERSION=1.0.0 curl -fsSL https://raw.githubusercontent.com/buhaiqing/k8s-app-accelerator-go/main/cmd/k8s-gen/install.sh | bash
+
+# Windows
+$Version = "1.0.0"; irm https://raw.githubusercontent.com/buhaiqing/k8s-app-accelerator-go/main/cmd/k8s-gen/install.ps1 | iex
+```
+
+### 验证安装
+
+```bash
+k8s-gen --help
+```
+
+### 从源码构建
+
+```bash
+# 克隆后构建
+git clone https://github.com/buhaiqing/k8s-app-accelerator-go.git
+cd k8s-app-accelerator-go
+make build
+
+# 或直接运行
+go run . --help
+```
+
+---
+
 ## 🎯 项目目标
 
 - ✅ **100% 兼容现有 Jinja2 模板**（无需修改 Ansible roles）
@@ -457,3 +517,21 @@ roles:
 ## 📚 文档
 
 - [docs/](./docs/) - 详细技术文档
+
+## 🔄 CI/CD
+
+GitHub Actions 自动执行以下流程：
+
+| Workflow | 触发条件 | 作用 |
+|----------|---------|------|
+| `test.yml` | push main / PR | Go build/vet/test + Python filters 测试 |
+| `validate.yml` | push main / PR | CLI 各子命令帮助校验 |
+| `release.yml` | tag `v*` / manual dispatch | 跨平台编译 + GitHub Release |
+
+### 发布新版本
+
+```bash
+# 打 tag 并推送，自动触发 release
+git tag v1.0.0
+git push origin v1.0.0
+```
