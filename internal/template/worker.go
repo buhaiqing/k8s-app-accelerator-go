@@ -9,7 +9,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"sync"
-	"syscall"
 	"time"
 )
 
@@ -143,12 +142,10 @@ func (w *PythonWorker) Close() error {
 			// 正常退出
 		case <-time.After(1 * time.Second):
 			// 超时，强制退出
-			// ponytail: process group kill, per-process kill if pgid unavailable
-			if w.cmd.SysProcAttr != nil && w.cmd.SysProcAttr.Pgid != 0 {
-				syscall.Kill(-w.cmd.Process.Pid, syscall.SIGKILL)
-			} else if w.cmd.Process != nil {
-				w.cmd.Process.Kill()
-			}
+			// ponytail: Process.Kill() on main process is sufficient since worker
+			// doesn't spawn child processes. On Unix, process group kill is
+			// handled in worker_unix.go via build constraint.
+			w.cmd.Process.Kill()
 		}
 	}
 
