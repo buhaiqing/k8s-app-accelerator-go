@@ -78,7 +78,7 @@ cd k8s-app-accelerator-go
 make build
 
 # 或直接运行
-go run . --help
+k8s-gen --help
 ```
 
 ---
@@ -111,7 +111,7 @@ pip3 install -r scripts/requirements.txt
 
 ```bash
 # 直接运行（推荐）
-go run . --help
+k8s-gen --help
 
 # 或编译后运行
 go build -o k8s-gen && ./k8s-gen --help
@@ -122,44 +122,44 @@ go build -o k8s-gen && ./k8s-gen --help
 ```bash
 # ========== K8s 配置生成 ==========
 # 预检配置
-go run . precheck --base-dir /path/to/configs
+k8s-gen precheck --base-dir /path/to/configs
 
 # 生成 K8s 配置（最简单的方式）
-go run . generate --base-dir /path/to/configs
+k8s-gen generate --base-dir /path/to/configs
 
 # 使用默认 base-dir
-go run . generate
+k8s-gen generate
 
 # ========== ArgoCD Application 生成 ==========
 # 生成所有 ArgoCD Applications
-go run . argocd generate --base-dir /path/to/configs
+k8s-gen argocd generate --base-dir /path/to/configs
 
 # 只生成指定的应用
-go run . argocd generate \
+k8s-gen argocd generate \
   --base-dir /path/to/configs \
   --roles cms-service,fms-service
 
 # 跳过预检（紧急情况）
-go run . argocd generate --base-dir /path/to/configs --skip-precheck
+k8s-gen argocd generate --base-dir /path/to/configs --skip-precheck
 
 # 查看详细日志
-go run . argocd generate --base-dir /path/to/configs --verbose
+k8s-gen argocd generate --base-dir /path/to/configs --verbose
 
 # ========== Jenkins Jobs 生成 ==========
 # 生成 Jenkins Jobs 配置
-go run . jenkins generate \
+k8s-gen jenkins generate \
   --base-dir /path/to/configs \
   --output output/jenkins
 
 # ========== CMDB SQL 生成 ==========
 # 生成 CMDB 初始化 SQL
-go run . cmdb \
+k8s-gen cmdb \
   --base-dir /path/to/configs \
   --output output/cmdb
 
 # ========== GitLab Cfg 生成 ==========
 # 生成 GitLab 项目配置
-go run . gitlab-cfg generate \
+k8s-gen gitlab-cfg generate \
   --base-dir /path/to/configs \
   --output output/gitlab-cfg
 ```
@@ -170,7 +170,7 @@ go run . gitlab-cfg generate \
 
 ```bash
 # 基本格式
-go run . argocd [command] [flags]
+k8s-gen argocd [command] [flags]
 
 # 可用命令
 generate    # 生成 ArgoCD Application 配置
@@ -194,7 +194,7 @@ help        # 显示帮助信息
 #### 1. 生成所有应用的 ArgoCD 配置
 
 ```bash
-go run . argocd generate --base-dir .
+k8s-gen argocd generate --base-dir .
 ```
 
 输出示例：
@@ -211,12 +211,12 @@ go run . argocd generate --base-dir .
 
 ```bash
 # 为 int 环境生成
-go run . argocd generate \
+k8s-gen argocd generate \
   --base-dir . \
   --config configs/vars-int.yaml
 
 # 为 production 环境生成
-go run . argocd generate \
+k8s-gen argocd generate \
   --base-dir . \
   --config configs/vars-production.yaml
 ```
@@ -225,7 +225,7 @@ go run . argocd generate \
 
 ```bash
 # 生成 3 个应用
-go run . argocd generate \
+k8s-gen argocd generate \
   --base-dir . \
   --roles cms-service,fms-service,user-service
 ```
@@ -234,7 +234,7 @@ go run . argocd generate \
 
 ```bash
 # 输出到指定目录
-go run . argocd generate \
+k8s-gen argocd generate \
   --base-dir . \
   --output /tmp/argocd-output
 ```
@@ -243,7 +243,7 @@ go run . argocd generate \
 
 ```bash
 # 跳过预检直接生成（不推荐）
-go run . argocd generate \
+k8s-gen argocd generate \
   --base-dir . \
   --skip-precheck
 ```
@@ -252,7 +252,7 @@ go run . argocd generate \
 
 ```bash
 # 启用详细日志
-go run . argocd generate \
+k8s-gen argocd generate \
   --base-dir . \
   --verbose
 ```
@@ -286,7 +286,7 @@ output/argo-app/cms-project/int/k8s_baas/
 
 ```bash
 # 基本格式
-go run . jenkins [command] [flags]
+k8s-gen jenkins [command] [flags]
 
 # 可用命令
 generate    # 生成 Jenkins Jobs 配置
@@ -297,10 +297,10 @@ help        # 显示帮助信息
 
 ```bash
 # 生成所有 Jenkins Jobs
-go run . jenkins generate --base-dir .
+k8s-gen jenkins generate --base-dir .
 
 # 自定义输出目录
-go run . jenkins generate \
+k8s-gen jenkins generate \
   --base-dir . \
   --output output/jenkins-jobs
 ```
@@ -324,7 +324,7 @@ output/
 
 ```bash
 # 基本格式
-go run . cmdb [flags]
+k8s-gen cmdb [flags]
 
 # 可用命令
 cmdb    # 生成 CMDB 初始化 SQL
@@ -344,12 +344,12 @@ help    # 显示帮助信息
 
 ```bash
 # 生成 CMDB SQL 脚本
-go run . cmdb \
+k8s-gen cmdb \
   --base-dir . \
   --output output/cmdb-sql
 
 # 指定配置文件
-go run . cmdb \
+k8s-gen cmdb \
   --base-dir /path/to/configs \
   --vars vars-test.yaml \
   --resources resources.yaml \
@@ -392,7 +392,7 @@ VALUES ('int-mongo-13846', NULL, NULL, 'JGsEUpf4hfFSro8n', NULL, 'baas', 'lpmas'
 
 ```bash
 # 基本格式
-go run . gitlab-cfg [command] [flags]
+k8s-gen gitlab-cfg [command] [flags]
 
 # 可用命令
 generate    # 生成 GitLab 项目配置
@@ -403,12 +403,12 @@ help        # 显示帮助信息
 
 ```bash
 # 生成 GitLab 项目配置
-go run . gitlab-cfg generate \
+k8s-gen gitlab-cfg generate \
   --base-dir . \
   --output output/gitlab-configs
 
 # 生成特定项目的配置
-go run . gitlab-cfg generate \
+k8s-gen gitlab-cfg generate \
   --base-dir . \
   --project my-project \
   --output output/my-project-configs
@@ -462,9 +462,9 @@ python3 scripts/render_worker.py --worker-mode
 pip3 install -r scripts/requirements.txt
 
 # 运行 Go 版本生成
-go run . generate --base-dir /path/to/configs
-go run . argocd generate --base-dir /path/to/configs
-go run . cmdb --base-dir /path/to/configs
+k8s-gen generate --base-dir /path/to/configs
+k8s-gen argocd generate --base-dir /path/to/configs
+k8s-gen cmdb --base-dir /path/to/configs
 
 # 对比输出
 bash scripts/compare_harness.sh
