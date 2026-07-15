@@ -30,8 +30,8 @@ jobs:
       - name: Check generate command
         run: ./k8s-gen generate --help
 
-      - name: Check list command
-        run: ./k8s-gen list --help
+      - name: Check argocd command
+        run: ./k8s-gen argocd --help
 
-      - name: Check config command
-        run: ./k8s-gen config --help
+      - name: Check gitlab-cfg command
+        run: ./k8s-gen gitlab-cfg --help
